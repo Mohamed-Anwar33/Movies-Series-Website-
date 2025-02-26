@@ -180,7 +180,9 @@ document.addEventListener("DOMContentLoaded", () => {
         `https://api.themoviedb.org/3/movie/popular?language=en-US&page=${page}&api_key=6ca0a8ba66555ed5deb3e6d9ddb2aa6c`,
         options
       );
-      if (!response.ok) throw new Error("Network response was not ok");
+      if (!response.ok) {
+        throw new Error(`Network response was not ok: ${response.status}`);
+      }
       const data = await response.json();
 
       const newMovies = data.results.map((movie) => ({
@@ -205,7 +207,7 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Error loading movies:", err);
       if (moviesList)
         moviesList.innerHTML =
-          '<p class="text-center text-danger">Failed to load movies</p>';
+          '<p class="text-center text-danger">Failed to load movies. Please check your connection or try again later.</p>';
       showNotification("Failed to load movies", "error");
     } finally {
       if (loadingSpinner) loadingSpinner.style.display = "none";
@@ -223,7 +225,9 @@ document.addEventListener("DOMContentLoaded", () => {
         `https://api.themoviedb.org/3/movie/now_playing?language=en-US&page=1&api_key=6ca0a8ba66555ed5deb3e6d9ddb2aa6c`,
         options
       );
-      if (!response.ok) throw new Error("Network response was not ok");
+      if (!response.ok) {
+        throw new Error(`Network response was not ok: ${response.status}`);
+      }
       const data = await response.json();
 
       const newMovies = data.results.map((movie) => ({
@@ -242,7 +246,7 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Error loading new releases:", err);
       if (newReleasesList)
         newReleasesList.innerHTML =
-          '<p class="text-center text-danger">Failed to load new releases</p>';
+          '<p class="text-center text-danger">Failed to load new releases. Please check your connection or try again later.</p>';
       showNotification("Failed to load new releases", "error");
     } finally {
       if (loadingSpinner) loadingSpinner.style.display = "none";
@@ -507,12 +511,25 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    // بيانات وهمية لو الـ API مش شغال
+    const mockMovie = {
+      title: "Sample Movie",
+      overview: "This is a sample movie description.",
+      vote_average: 7.5,
+      release_date: "2023-01-01",
+      genres: [{ name: "Action" }, { name: "Drama" }],
+      poster_path: "/default_poster.jpg",
+      backdrop_path: "/default_backdrop.jpg",
+    };
+
     try {
       const response = await fetch(
         `https://api.themoviedb.org/3/movie/${movieId}?language=en-US&api_key=6ca0a8ba66555ed5deb3e6d9ddb2aa6c`,
         options
       );
-      if (!response.ok) throw new Error("Network response was not ok");
+      if (!response.ok) {
+        throw new Error(`Network response was not ok: ${response.status}`);
+      }
       const movie = await response.json();
 
       movieDetails.innerHTML = `
@@ -563,31 +580,73 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (err) {
       console.error("Error loading movie details:", err);
       movieDetails.innerHTML =
-        '<p class="text-center text-danger">Failed to load movie details</p>';
+        '<p class="text-center text-danger">Failed to load movie details from API. Showing sample data instead.</p>';
+      movieDetails.innerHTML += `
+        <h2 class="neon-text ultra-title">${mockMovie.title}</h2>
+        <img
+          src="https://image.tmdb.org/t/p/w500/${mockMovie.poster_path}"
+          alt="${mockMovie.title}"
+          class="img-fluid mb-3 progressive-load lazy-load"
+          data-src="https://image.tmdb.org/t/p/w500/${mockMovie.poster_path}"
+        />
+        <p><strong>Overview:</strong> ${mockMovie.overview}</p>
+        <p><strong>Rating:</strong> ${mockMovie.vote_average}</p>
+        <p><strong>Release Date:</strong> ${mockMovie.release_date}</p>
+        <p><strong>Genres:</strong> ${mockMovie.genres
+          .map((g) => g.name)
+          .join(", ")}</p>
+      `;
+      loadComments(movieId);
+      loadReviews(movieId);
+      loadExpandedProfile(mockMovie);
+      loadCast(movieId, true); // true لاستخدام بيانات وهمية
+      setVideoBackground(mockMovie.backdrop_path);
+      lazyLoadImages();
     }
   }
 
-  async function loadCast(movieId) {
+  async function loadCast(movieId, useMock = false) {
     if (!checkLogin()) return;
 
     const castList = document.getElementById("castList");
     if (!castList) return;
 
+    // بيانات وهمية
+    const mockCast = [
+      { name: "Actor 1", character: "Role 1", profile_path: null },
+      { name: "Actor 2", character: "Role 2", profile_path: null },
+    ];
+
+    if (useMock) {
+      renderCast(mockCast);
+      return;
+    }
+
     try {
       const response = await fetch(
-        `https://api.themo
-        viedb.org/3/movie/${movieId}/credits?language=en-US&api_key=6ca0a8ba66555ed5deb3e6d9ddb2aa6c`,
+        `https://api.themoviedb.org/3/movie/${movieId}/credits?language=en-US&api_key=6ca0a8ba66555ed5deb3e6d9ddb2aa6c`,
         options
       );
-      if (!response.ok) throw new Error("Network response was not ok");
+      if (!response.ok) {
+        throw new Error(`Network response was not ok: ${response.status}`);
+      }
       const data = await response.json();
       const mainCast = data.cast.slice(0, 5);
 
       localStorage.setItem(`cast_${movieId}`, JSON.stringify(mainCast));
+      renderCast(mainCast);
+    } catch (err) {
+      console.error("Error loading cast:", err);
+      castList.innerHTML =
+        "<p>Unable to load cast from API. Showing sample data instead.</p>";
+      renderCast(mockCast);
+    }
+
+    function renderCast(cast) {
       castList.innerHTML = `
         <h5>Main Cast</h5>
         <div class="cast-list">
-          ${mainCast
+          ${cast
             .map(
               (actor) => `
               <div class="cast-item">
@@ -604,9 +663,6 @@ document.addEventListener("DOMContentLoaded", () => {
             .join("")}
         </div>
       `;
-    } catch (err) {
-      console.error("Error loading cast:", err);
-      castList.innerHTML = "<p>Failed to load cast</p>";
     }
   }
 
@@ -1274,7 +1330,7 @@ document.addEventListener("DOMContentLoaded", () => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           const img = entry.target;
-          img.src = img.dataset.src;
+          img.src = img.dataset.src || "/default_image.jpg"; // صورة افتراضية لو الصورة مش موجودة
           img.classList.remove("lazy-load");
           observer.unobserve(img);
         }
