@@ -26,10 +26,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const movieDetails = document.getElementById("movieDetails");
   const profileEmail = document.getElementById("profileEmail");
 
-  // Redirect to login if not logged in and on index.html
-  if (!isLoggedIn && window.location.pathname.includes("index.html")) {
-    window.location.href = "login.html";
-    return; // توقف تنفيذ الكود لو تم التوجيه
+  // دالة لفحص تسجيل الدخول
+  function checkLogin() {
+    if (!isLoggedIn) {
+      Swal.fire({
+        icon: "warning",
+        title: "Login Required",
+        text: "Please log in to access this feature.",
+        confirmButtonText: "Go to Login",
+      }).then(() => {
+        window.location.href = "login.html";
+      });
+      return false;
+    }
+    return true;
   }
 
   // Helper Functions
@@ -95,8 +105,12 @@ document.addEventListener("DOMContentLoaded", () => {
   if (filterElements.searchInput) {
     Object.values(filterElements).forEach((element) => {
       if (element) {
-        element.addEventListener("input", filterAndSortMovies);
-        element.addEventListener("change", filterAndSortMovies);
+        element.addEventListener("input", () => {
+          if (checkLogin()) filterAndSortMovies();
+        });
+        element.addEventListener("change", () => {
+          if (checkLogin()) filterAndSortMovies();
+        });
       }
     });
   }
@@ -105,16 +119,23 @@ document.addEventListener("DOMContentLoaded", () => {
   const loadMoreBtn = document.getElementById("loadMoreBtn");
   if (loadMoreBtn) {
     loadMoreBtn.addEventListener("click", () => {
-      currentPage++;
-      loadMovies(currentPage);
+      if (checkLogin()) {
+        currentPage++;
+        loadMovies(currentPage);
+      }
     });
   }
 
   // Initial Page Load
   if (moviesList) {
-    navigator.onLine ? loadMovies(currentPage) : filterAndSortMovies();
-    loadNewsFeed();
-    startActiveTimeCounter();
+    if (isLoggedIn) {
+      navigator.onLine ? loadMovies(currentPage) : filterAndSortMovies();
+      loadNewsFeed();
+      startActiveTimeCounter();
+    } else {
+      moviesList.innerHTML =
+        '<p class="text-center">Please log in to view movies</p>';
+    }
   }
   if (favoritesList) {
     displayFavorites();
@@ -149,6 +170,8 @@ document.addEventListener("DOMContentLoaded", () => {
   setupLoginForm();
 
   async function loadMovies(page) {
+    if (!checkLogin()) return;
+
     const loadingSpinner = document.getElementById("loadingSpinner");
     if (loadingSpinner) loadingSpinner.style.display = "block";
 
@@ -190,6 +213,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function loadNewReleases() {
+    if (!checkLogin()) return;
+
     const loadingSpinner = document.getElementById("loadingSpinner");
     if (loadingSpinner) loadingSpinner.style.display = "block";
 
@@ -323,7 +348,9 @@ document.addEventListener("DOMContentLoaded", () => {
       .join("");
 
     targetList.querySelectorAll(".movie-card").forEach((card) => {
-      card.addEventListener("click", () => viewDetails(card.dataset.movieId));
+      card.addEventListener("click", () => {
+        if (checkLogin()) viewDetails(card.dataset.movieId);
+      });
     });
 
     lazyLoadImages();
@@ -369,7 +396,9 @@ document.addEventListener("DOMContentLoaded", () => {
       .join("");
 
     favoritesList.querySelectorAll(".movie-card").forEach((card) => {
-      card.addEventListener("click", () => viewDetails(card.dataset.movieId));
+      card.addEventListener("click", () => {
+        if (checkLogin()) viewDetails(card.dataset.movieId);
+      });
     });
 
     lazyLoadImages();
@@ -411,7 +440,9 @@ document.addEventListener("DOMContentLoaded", () => {
       .join("");
 
     watchedList.querySelectorAll(".movie-card").forEach((card) => {
-      card.addEventListener("click", () => viewDetails(card.dataset.movieId));
+      card.addEventListener("click", () => {
+        if (checkLogin()) viewDetails(card.dataset.movieId);
+      });
     });
 
     lazyLoadImages();
@@ -458,13 +489,17 @@ document.addEventListener("DOMContentLoaded", () => {
       .join("");
 
     watchlistList.querySelectorAll(".movie-card").forEach((card) => {
-      card.addEventListener("click", () => viewDetails(card.dataset.movieId));
+      card.addEventListener("click", () => {
+        if (checkLogin()) viewDetails(card.dataset.movieId);
+      });
     });
 
     lazyLoadImages();
   }
 
   async function loadMovieDetails() {
+    if (!checkLogin()) return;
+
     if (!movieDetails) return;
     const movieId = localStorage.getItem("selectedMovieId");
     if (!movieId) {
@@ -533,12 +568,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function loadCast(movieId) {
+    if (!checkLogin()) return;
+
     const castList = document.getElementById("castList");
     if (!castList) return;
 
     try {
       const response = await fetch(
-        `https://api.themoviedb.org/3/movie/${movieId}/credits?language=en-US&api_key=6ca0a8ba66555ed5deb3e6d9ddb2aa6c`,
+        `https://api.themo
+        viedb.org/3/movie/${movieId}/credits?language=en-US&api_key=6ca0a8ba66555ed5deb3e6d9ddb2aa6c`,
         options
       );
       if (!response.ok) throw new Error("Network response was not ok");
@@ -621,6 +659,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function loadNewsFeed() {
+    if (!checkLogin()) return;
+
     const newsFeed = document.getElementById("newsFeed");
     if (!newsFeed) return;
 
@@ -642,6 +682,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function loadProfile() {
+    if (!checkLogin()) return;
+
     const profileEmail = document.getElementById("profileEmail");
     if (!profileEmail) return;
 
@@ -727,6 +769,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Window Functions
   window.addToFavorites = (movieId, event) => {
+    if (!checkLogin()) return;
     event.stopPropagation();
     const movie = moviesData.find((m) => m.id === movieId);
     if (!movie || favorites.some((fav) => fav.id === movieId)) {
@@ -747,6 +790,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.removeFromFavorites = (movieId) => {
+    if (!checkLogin()) return;
     favorites = favorites.filter((fav) => fav.id !== movieId);
     localStorage.setItem("favorites", JSON.stringify(favorites));
     displayFavorites();
@@ -755,6 +799,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.markAsWatched = (movieId, event) => {
+    if (!checkLogin()) return;
     if (event) event.stopPropagation();
     const movie = moviesData.find((m) => m.id === movieId);
     if (!movie || watched.some((w) => w.id === movieId)) {
@@ -775,6 +820,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.addToWatchlist = (movieId, event) => {
+    if (!checkLogin()) return;
     event.stopPropagation();
     const movie = moviesData.find((m) => m.id === movieId);
     if (!movie || watchlist.some((w) => w.id === movieId)) {
@@ -788,6 +834,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.removeFromWatchlist = (movieId) => {
+    if (!checkLogin()) return;
     watchlist = watchlist.filter((w) => w.id !== movieId);
     localStorage.setItem("watchlist", JSON.stringify(watchlist));
     displayWatchlist();
@@ -795,11 +842,13 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.viewDetails = (movieId) => {
+    if (!checkLogin()) return;
     localStorage.setItem("selectedMovieId", movieId);
     window.location.href = "movie-details.html";
   };
 
   window.watchTrailer = () => {
+    if (!checkLogin()) return;
     const movieId = localStorage.getItem("selectedMovieId");
     const trailerPlayer = document.getElementById("trailerPlayer");
     fetch(
@@ -820,6 +869,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.shareMovie = () => {
+    if (!checkLogin()) return;
     const movieId = localStorage.getItem("selectedMovieId");
     const movie = moviesData.find((m) => m.id === parseInt(movieId));
     const url = `${window.location.origin}/movie-details.html?movieId=${movieId}`;
@@ -836,6 +886,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.startWatchParty = () => {
+    if (!checkLogin()) return;
     const movieId = localStorage.getItem("selectedMovieId");
     const partyLink = `${
       window.location.origin
@@ -848,6 +899,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.toggleCinemaMode = () => {
+    if (!checkLogin()) return;
     document.body.classList.toggle("cinema-mode");
     const trailerPlayer = document.getElementById("trailerPlayer");
     if (
@@ -872,6 +924,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.toggleLike = (movieId) => {
+    if (!checkLogin()) return;
     const likeBtn = document.querySelector('button[onclick^="toggleLike"]');
     if (!likeBtn) return;
 
@@ -892,6 +945,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.savePersonalRating = () => {
+    if (!checkLogin()) return;
     const movieId = localStorage.getItem("selectedMovieId");
     const rating = document.getElementById("personalRating").value;
     if (rating < 0 || rating > 10) {
@@ -906,6 +960,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.saveComment = () => {
+    if (!checkLogin()) return;
     const movieId = localStorage.getItem("selectedMovieId");
     const comment = document.getElementById("commentInput").value;
     if (!comment) {
@@ -922,6 +977,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.saveReview = () => {
+    if (!checkLogin()) return;
     const movieId = localStorage.getItem("selectedMovieId");
     const reviewText = document.getElementById("reviewInput").value;
     const reviewStars = document.getElementById("reviewStars").value;
@@ -943,6 +999,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.saveNotes = () => {
+    if (!checkLogin()) return;
     const movieId = localStorage.getItem("selectedMovieId");
     const notes = document.getElementById("notesInput").value;
     localStorage.setItem(`notes_${movieId}`, notes);
@@ -951,6 +1008,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.setCustomNotification = (movieId) => {
+    if (!checkLogin()) return;
     const time = document.getElementById("customNotificationTime").value;
     if (!time) {
       Swal.fire("Error", "Please select a time", "error");
@@ -960,6 +1018,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.showMovieSchedule = () => {
+    if (!checkLogin()) return;
     fetch(
       `https://api.themoviedb.org/3/movie/upcoming?language=en-US&page=1&api_key=6ca0a8ba66555ed5deb3e6d9ddb2aa6c`,
       options
@@ -977,6 +1036,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.addToReminders = (movieId, releaseDate) => {
+    if (!checkLogin()) return;
     const reminders = JSON.parse(localStorage.getItem("reminders") || "[]");
     if (!reminders.some((r) => r.movieId === movieId)) {
       reminders.push({ movieId, releaseDate });
@@ -988,6 +1048,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.createAutoPlaylist = () => {
+    if (!checkLogin()) return;
     Swal.fire({
       title: "Create Auto Playlist",
       html: `
@@ -1033,6 +1094,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.savePlaylist = (playlistElement) => {
+    if (!checkLogin()) return;
     const playlist = Array.from(playlistElement.children).map(
       (li) => li.textContent
     );
@@ -1041,6 +1103,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.changeBackground = () => {
+    if (!checkLogin()) return;
     const randomMovie =
       moviesData[Math.floor(Math.random() * moviesData.length)];
     if (randomMovie) {
@@ -1051,6 +1114,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.showRandomMovie = () => {
+    if (!checkLogin()) return;
     if (moviesData.length === 0) {
       Swal.fire("Warning", "No movies available", "warning");
       return;
@@ -1064,6 +1128,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.voiceSearch = () => {
+    if (!checkLogin()) return;
     if (!("webkitSpeechRecognition" in window)) {
       Swal.fire("Error", "Voice search not supported in this browser", "error");
       return;
@@ -1078,6 +1143,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.redeemPoints = () => {
+    if (!checkLogin()) return;
     if (points >= 50) {
       points -= 50;
       localStorage.setItem("points", points);
@@ -1094,6 +1160,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.exportFavorites = () => {
+    if (!checkLogin()) return;
     if (favorites.length === 0) {
       Swal.fire("Warning", "No favorites to export", "warning");
       return;
@@ -1111,6 +1178,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.importFavorites = (event) => {
+    if (!checkLogin()) return;
     const file = event.target.files[0];
     if (!file) return;
     const reader = new FileReader();
@@ -1137,6 +1205,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.updateProfilePic = (event) => {
+    if (!checkLogin()) return;
     const file = event.target.files[0];
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -1149,6 +1218,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.uploadCustomBackground = (event) => {
+    if (!checkLogin()) return;
     const file = event.target.files[0];
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -1161,6 +1231,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.changeFontSize = (size) => {
+    if (!checkLogin()) return;
     localStorage.setItem("fontSize", size);
     document.body.style.fontSize = `${size}px`;
   };
