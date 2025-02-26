@@ -50,6 +50,9 @@
               <a class="nav-link" href="watched.html">Watched</a>
             </li>
             <li class="nav-item">
+              <a class="nav-link" href="watchlist.html">Watchlist</a>
+            </li>
+            <li class="nav-item">
               <a class="nav-link" href="new-releases.html">New Releases</a>
             </li>
             <li class="nav-item">
@@ -75,7 +78,7 @@
           type="text"
           id="searchInput"
           class="form-control mb-2"
-          placeholder="Search movies..."
+          placeholder="Search by title..."
         />
         <select id="genreFilter" class="form-select mb-2">
           <option value="">All Genres</option>
@@ -93,19 +96,29 @@
           min="1900"
           max="2025"
         />
-        <input
-          type="text"
-          id="actorFilter"
-          class="form-control mb-2"
-          placeholder="Actor Name"
-        />
-        <input
-          type="number"
-          id="durationFilter"
-          class="form-control mb-2"
-          placeholder="Max Duration (minutes)"
-          min="0"
-        />
+        <button
+          class="btn btn-link mb-2"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#advancedFilters"
+        >
+          Advanced Filters <i class="fas fa-caret-down"></i>
+        </button>
+        <div class="collapse" id="advancedFilters">
+          <input
+            type="text"
+            id="actorFilter"
+            class="form-control mb-2"
+            placeholder="Actor Name"
+          />
+          <input
+            type="number"
+            id="durationFilter"
+            class="form-control mb-2"
+            placeholder="Max Duration (minutes)"
+            min="0"
+          />
+        </div>
         <select id="sortSelect" class="form-select mb-2">
           <option value="">Sort By</option>
           <option value="title-asc">Title (A-Z)</option>
@@ -113,6 +126,21 @@
           <option value="rating-asc">Rating (Low to High)</option>
           <option value="rating-desc">Rating (High to Low)</option>
         </select>
+        <button class="btn btn-warning neon-btn" onclick="showMovieSchedule()">
+          Movie Schedule
+        </button>
+        <button class="btn btn-info neon-btn" onclick="createAutoPlaylist()">
+          Auto Playlist
+        </button>
+        <button class="btn btn-primary neon-btn" onclick="changeBackground()">
+          Change Background
+        </button>
+        <button class="btn btn-secondary neon-btn" onclick="voiceSearch()">
+          <i class="fas fa-microphone"></i> Voice Search
+        </button>
+        <button class="btn btn-danger neon-btn" onclick="showRandomMovie()">
+          Random Movie
+        </button>
       </div>
       <div class="row" id="moviesList"></div>
       <div class="text-center mt-4">
@@ -123,6 +151,7 @@
           class="spinner-border text-primary mt-2"
           id="loadingSpinner"
           role="status"
+          style="display: none"
         ></div>
       </div>
       <div class="mt-4">

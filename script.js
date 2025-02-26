@@ -19,11 +19,16 @@ document.addEventListener("DOMContentLoaded", () => {
   let activeTime = 0;
   let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
   let watched = JSON.parse(localStorage.getItem("watched")) || [];
+  let watchlist = JSON.parse(localStorage.getItem("watchlist")) || [];
+  let likes = JSON.parse(localStorage.getItem("likes")) || {};
+  let shares = JSON.parse(localStorage.getItem("shares")) || {};
+  let notificationQueue = [];
 
   const moviesList = document.getElementById("moviesList");
   const favoritesList = document.getElementById("favoritesList");
   const watchedList = document.getElementById("watchedList");
   const newReleasesList = document.getElementById("newReleasesList");
+  const watchlistList = document.getElementById("watchlistList");
 
   const loadMoreBtn = document.getElementById("loadMoreBtn");
   if (loadMoreBtn) {
@@ -48,11 +53,18 @@ document.addEventListener("DOMContentLoaded", () => {
     durationFilter.addEventListener("input", filterAndSortMovies);
   }
 
-  if (moviesList) {
+  if (
+    moviesList ||
+    favoritesList ||
+    watchedList ||
+    newReleasesList ||
+    watchlistList
+  ) {
     if (navigator.onLine) loadMovies(currentPage);
     else filterAndSortMovies();
     loadNewsFeed();
     startActiveTimeCounter();
+    checkTimedNotifications();
   }
 
   if (favoritesList) {
@@ -61,6 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   if (watchedList) displayWatched();
   if (newReleasesList) loadNewReleases();
+  if (watchlistList) displayWatchlist();
 
   const movieDetails = document.getElementById("movieDetails");
   if (movieDetails) loadMovieDetails();
@@ -90,6 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function handleLogout() {
     localStorage.removeItem("loggedIn");
+    localStorage.removeItem("loggedInEmail");
     window.location.href = "login.html";
   }
 
@@ -124,17 +138,17 @@ document.addEventListener("DOMContentLoaded", () => {
           poster_path: movie.poster_path,
           rating: movie.vote_average,
           release_date: movie.release_date,
-          runtime: movie.runtime || 0, // For advanced filtering
+          runtime: movie.runtime || 0,
         }));
         moviesData = [...moviesData, ...newMovies];
         localStorage.setItem("offlineMovies", JSON.stringify(moviesData));
         filterAndSortMovies();
-        showNotification(`New movies loaded from page ${page}!`, "info");
       })
       .catch((err) => {
         console.error("Fetch Error:", err);
-        moviesList.innerHTML =
-          '<p class="text-center">Failed to load movies.</p>';
+        if (moviesList)
+          moviesList.innerHTML =
+            '<p class="text-center">Failed to load movies.</p>';
         if (typeof Swal !== "undefined") {
           Swal.fire({
             icon: "error",
@@ -171,8 +185,9 @@ document.addEventListener("DOMContentLoaded", () => {
       })
       .catch((err) => {
         console.error("Fetch Error:", err);
-        newReleasesList.innerHTML =
-          '<p class="text-center">Failed to load new releases.</p>';
+        if (newReleasesList)
+          newReleasesList.innerHTML =
+            '<p class="text-center">Failed to load new releases.</p>';
       })
       .finally(() => {
         if (loadingSpinner) loadingSpinner.style.display = "none";
@@ -232,19 +247,20 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     targetList.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     movies.forEach((movie, index) => {
       const card = document.createElement("div");
       card.className = "col-md-4 mb-4 movie-card-wrapper";
       card.style.opacity = "0";
       card.innerHTML = `
         <div class="card movie-card ultra-card" data-movie-id="${movie.id}">
-          <img src="https://image.tmdb.org/t/p/w500/${
+          <img src="https://image.tmdb.org/t/p/w200/${
             movie.poster_path
           }" alt="${
         movie.title
-      }" class="progressive-load lazy-load" data-src="https://image.tmdb.org/t/p/w500/${
+      }" class="progressive-load lazy-load" data-src="https://image.tmdb.org/t/p/w200/${
         movie.poster_path
-      }" />
+      }" loading="lazy" />
           <div class="card-body">
             <h5 class="card-title neon-text">${movie.title}</h5>
             <p class="card-text">${movie.overview.substring(0, 50)}...</p>
@@ -254,10 +270,17 @@ document.addEventListener("DOMContentLoaded", () => {
             }, event)">
               <i class="fas fa-heart"></i> Add to Favorites
             </button>
-            <button class="btn btn-sm btn-secondary mt-2" onclick="markAsWatched(${
+            <button class="btn btn-sm btn-secondary mt-2" onclick="addToWatchlist(${
               movie.id
             }, event)">
-              <i class="fas fa-eye"></i> Watched
+              <i class="fas fa-clock"></i> Add to Watchlist
+            </button>
+            <button class="btn btn-sm btn-info mt-2" onclick="toggleLike(${
+              movie.id
+            })">
+              <i class="fas fa-thumbs-up"></i> Like (${
+                likes[movie.id]?.[localStorage.getItem("loggedInEmail")] || 0
+              })
             </button>
           </div>
         </div>
@@ -266,85 +289,18 @@ document.addEventListener("DOMContentLoaded", () => {
         .querySelector(".movie-card")
         .addEventListener("click", () => viewDetails(movie.id));
       card.addEventListener("mousemove", (e) => eyeTrackingNavigation(e, card));
-      targetList.appendChild(card);
+      card.addEventListener("click", (e) => {
+        if (!e.target.closest("button")) zoomImage(movie);
+      });
+      fragment.appendChild(card);
       setTimeout(() => {
         card.style.transition = "opacity 0.5s ease";
         card.style.opacity = "1";
       }, index * 100);
     });
+    targetList.appendChild(fragment);
     lazyLoadImages();
   }
-
-  window.addToFavorites = function (movieId, event) {
-    event.stopPropagation();
-    const movie = moviesData.find((m) => m.id === movieId);
-    if (!favorites.some((fav) => fav.id === movie.id)) {
-      favorites.push(movie);
-      localStorage.setItem("favorites", JSON.stringify(favorites));
-      points += 10;
-      localStorage.setItem("points", points);
-      if (typeof Swal !== "undefined") {
-        Swal.fire({
-          icon: "success",
-          title: "Added!",
-          text: `${movie.title} added to favorites. +10 points!`,
-        });
-      }
-      updatePointsDisplay();
-      updateLiveStats();
-      if (favoritesList) displayFavorites();
-    } else {
-      if (typeof Swal !== "undefined") {
-        Swal.fire({
-          icon: "warning",
-          title: "Already Added!",
-          text: `${movie.title} is already in favorites.`,
-        });
-      }
-    }
-  };
-
-  window.removeFromFavorites = function (movieId) {
-    favorites = favorites.filter((fav) => fav.id !== movieId);
-    localStorage.setItem("favorites", JSON.stringify(favorites));
-    displayFavorites();
-    if (typeof Swal !== "undefined") {
-      Swal.fire({
-        icon: "success",
-        title: "Removed!",
-        text: "Movie removed from favorites.",
-      });
-    }
-    updateLiveStats();
-  };
-
-  window.markAsWatched = function (movieId, event) {
-    if (event) event.stopPropagation();
-    const movie = moviesData.find((m) => m.id === movieId);
-    if (!watched.some((w) => w.id === movie.id)) {
-      watched.push(movie);
-      localStorage.setItem("watched", JSON.stringify(watched));
-      points += 5;
-      localStorage.setItem("points", points);
-      if (typeof Swal !== "undefined") {
-        Swal.fire({
-          icon: "success",
-          title: "Watched!",
-          text: `${movie.title} added to watched. +5 points!`,
-        });
-      }
-      updatePointsDisplay();
-      updateLiveStats();
-    } else {
-      if (typeof Swal !== "undefined") {
-        Swal.fire({
-          icon: "warning",
-          title: "Already Watched!",
-          text: `${movie.title} is already watched.`,
-        });
-      }
-    }
-  };
 
   function displayFavorites() {
     if (!favoritesList) return;
@@ -352,18 +308,19 @@ document.addEventListener("DOMContentLoaded", () => {
       favoritesList.innerHTML = '<p class="text-center">No favorites yet.</p>';
     } else {
       favoritesList.innerHTML = "";
+      const fragment = document.createDocumentFragment();
       favorites.forEach((movie) => {
         const card = document.createElement("div");
         card.className = "col-md-4 mb-4 movie-card-wrapper";
         card.innerHTML = `
-          <div class="card movie-card ultra-card">
-            <img src="https://image.tmdb.org/t/p/w500/${
+          <div class="card movie-card ultra-card" data-movie-id="${movie.id}">
+            <img src="https://image.tmdb.org/t/p/w200/${
               movie.poster_path
             }" alt="${
           movie.title
-        }" class="lazy-load" data-src="https://image.tmdb.org/t/p/w500/${
+        }" class="lazy-load" data-src="https://image.tmdb.org/t/p/w200/${
           movie.poster_path
-        }" />
+        }" loading="lazy" />
             <div class="card-body">
               <h5 class="card-title neon-text">${movie.title}</h5>
               <p class="card-text">${movie.overview.substring(0, 50)}...</p>
@@ -373,14 +330,28 @@ document.addEventListener("DOMContentLoaded", () => {
               })">
                 <i class="fas fa-trash"></i> Remove
               </button>
+              <button class="btn btn-sm btn-info mt-2" onclick="toggleLike(${
+                movie.id
+              })">
+                <i class="fas fa-thumbs-up"></i> Like (${
+                  likes[movie.id]?.[localStorage.getItem("loggedInEmail")] || 0
+                })
+              </button>
             </div>
           </div>
         `;
         card
           .querySelector(".movie-card")
           .addEventListener("click", () => viewDetails(movie.id));
-        favoritesList.appendChild(card);
+        card.addEventListener("mousemove", (e) =>
+          eyeTrackingNavigation(e, card)
+        );
+        card.addEventListener("click", (e) => {
+          if (!e.target.closest("button")) zoomImage(movie);
+        });
+        fragment.appendChild(card);
       });
+      favoritesList.appendChild(fragment);
     }
     updateLiveStats();
     lazyLoadImages();
@@ -394,18 +365,19 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     watchedList.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     watched.forEach((movie) => {
       const card = document.createElement("div");
       card.className = "col-md-4 mb-4 movie-card-wrapper";
       card.innerHTML = `
-        <div class="card movie-card ultra-card">
-          <img src="https://image.tmdb.org/t/p/w500/${
+        <div class="card movie-card ultra-card" data-movie-id="${movie.id}">
+          <img src="https://image.tmdb.org/t/p/w200/${
             movie.poster_path
           }" alt="${
         movie.title
-      }" class="lazy-load" data-src="https://image.tmdb.org/t/p/w500/${
+      }" class="lazy-load" data-src="https://image.tmdb.org/t/p/w200/${
         movie.poster_path
-      }" />
+      }" loading="lazy" />
           <div class="card-body">
             <h5 class="card-title neon-text">${movie.title}</h5>
             <p class="card-text">${movie.overview.substring(0, 50)}...</p>
@@ -416,8 +388,59 @@ document.addEventListener("DOMContentLoaded", () => {
       card
         .querySelector(".movie-card")
         .addEventListener("click", () => viewDetails(movie.id));
-      watchedList.appendChild(card);
+      card.addEventListener("mousemove", (e) => eyeTrackingNavigation(e, card));
+      card.addEventListener("click", (e) => {
+        if (!e.target.closest("button")) zoomImage(movie);
+      });
+      fragment.appendChild(card);
     });
+    watchedList.appendChild(fragment);
+    lazyLoadImages();
+  }
+
+  function displayWatchlist() {
+    if (!watchlistList) return;
+    if (watchlist.length === 0) {
+      watchlistList.innerHTML =
+        '<p class="text-center">No movies in watchlist yet.</p>';
+      return;
+    }
+    watchlistList.innerHTML = "";
+    const fragment = document.createDocumentFragment();
+    watchlist.forEach((movie) => {
+      const card = document.createElement("div");
+      card.className = "col-md-4 mb-4 movie-card-wrapper";
+      card.innerHTML = `
+        <div class="card movie-card ultra-card" data-movie-id="${movie.id}">
+          <img src="https://image.tmdb.org/t/p/w200/${
+            movie.poster_path
+          }" alt="${
+        movie.title
+      }" class="lazy-load" data-src="https://image.tmdb.org/t/p/w200/${
+        movie.poster_path
+      }" loading="lazy" />
+          <div class="card-body">
+            <h5 class="card-title neon-text">${movie.title}</h5>
+            <p class="card-text">${movie.overview.substring(0, 50)}...</p>
+            <p><strong>Rating:</strong> ${movie.rating}</p>
+            <button class="btn btn-sm btn-danger neon-btn" onclick="removeFromWatchlist(${
+              movie.id
+            })">
+              <i class="fas fa-trash"></i> Remove
+            </button>
+          </div>
+        </div>
+      `;
+      card
+        .querySelector(".movie-card")
+        .addEventListener("click", () => viewDetails(movie.id));
+      card.addEventListener("mousemove", (e) => eyeTrackingNavigation(e, card));
+      card.addEventListener("click", (e) => {
+        if (!e.target.closest("button")) zoomImage(movie);
+      });
+      fragment.appendChild(card);
+    });
+    watchlistList.appendChild(fragment);
     lazyLoadImages();
   }
 
@@ -464,6 +487,10 @@ document.addEventListener("DOMContentLoaded", () => {
     window.location.href = "movie-details.html";
   };
 
+  window.getSelectedMovieId = function () {
+    return parseInt(localStorage.getItem("selectedMovieId"));
+  };
+
   function loadMovieDetails() {
     const movieDetails = document.getElementById("movieDetails");
     if (!movieDetails) return;
@@ -480,15 +507,17 @@ document.addEventListener("DOMContentLoaded", () => {
       .then((movie) => {
         movieDetails.innerHTML = `
           <h2 class="neon-text ultra-title">${movie.title}</h2>
-          <img src="https://image.tmdb.org/t/p/w500/${
+          <img src="https://image.tmdb.org/t/p/w200/${
             movie.poster_path
           }" alt="${
           movie.title
-        }" class="img-fluid mb-3 progressive-load lazy-load" data-src="https://image.tmdb.org/t/p/w500/${
+        }" class="img-fluid mb-3 progressive-load lazy-load" data-src="https://image.tmdb.org/t/p/w200/${
           movie.poster_path
-        }" />
+        }" loading="lazy" />
           <p><strong>Overview:</strong> ${movie.overview}</p>
-          <p><strong>Rating:</strong> ${movie.vote_average}</p>
+          <p><strong>Rating:</strong> ${
+            movie.vote_average
+          } (Group Avg: ${calculateGroupRating(movieId).toFixed(2)})</p>
           <p><strong>Release Date:</strong> ${movie.release_date}</p>
           <p><strong>Genres:</strong> ${movie.genres
             .map((g) => g.name)
@@ -517,6 +546,13 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error("Fetch Error:", err);
         movieDetails.innerHTML =
           '<p class="text-center">Failed to load movie details.</p>';
+        if (typeof Swal !== "undefined") {
+          Swal.fire({
+            icon: "error",
+            title: "Error!",
+            text: "Failed to load movie details.",
+          });
+        }
       });
   }
 
@@ -529,7 +565,7 @@ document.addEventListener("DOMContentLoaded", () => {
     )
       .then((res) => res.json())
       .then((data) => {
-        const mainCast = data.cast.slice(0, 5); // Top 5 actors
+        const mainCast = data.cast.slice(0, 5);
         localStorage.setItem(`cast_${movieId}`, JSON.stringify(mainCast));
         castList.innerHTML =
           "<h5>Main Cast</h5><div class='cast-list'>" +
@@ -539,7 +575,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="cast-item">
               <img src="https://image.tmdb.org/t/p/w200${
                 actor.profile_path || "/default_actor.jpg"
-              }" alt="${actor.name}" />
+              }" alt="${actor.name}" loading="lazy" />
               <p>${actor.name} as ${actor.character}</p>
             </div>
           `
@@ -585,10 +621,25 @@ document.addEventListener("DOMContentLoaded", () => {
         if (trailer) {
           trailerPlayer.innerHTML = `<iframe width="100%" height="315" src="https://www.youtube.com/embed/${trailer.key}" frameborder="0" allowfullscreen></iframe>`;
           trailerPlayer.style.display = "block";
+        } else {
+          if (typeof Swal !== "undefined") {
+            Swal.fire({
+              icon: "info",
+              title: "No Trailer",
+              text: "No trailer available for this movie.",
+            });
+          }
         }
       })
       .catch((err) => {
         console.error("Fetch Error:", err);
+        if (typeof Swal !== "undefined") {
+          Swal.fire({
+            icon: "error",
+            title: "Error!",
+            text: "Failed to load trailer.",
+          });
+        }
       });
   };
 
@@ -597,15 +648,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const movie = moviesData.find((m) => m.id === parseInt(movieId));
     const url = `${window.location.origin}/movie-details.html?movieId=${movieId}`;
     const text = `Check out "${movie.title}" on Movies & Series!`;
+    shares[movieId] = (shares[movieId] || 0) + 1;
+    localStorage.setItem("shares", JSON.stringify(shares));
     if (navigator.share) {
       navigator.share({ title: movie.title, text: text, url: url });
     } else {
-      const shareLink = `<a href="${url}" target="_blank">${text}</a>`;
       if (typeof Swal !== "undefined") {
         Swal.fire({
           icon: "info",
           title: "Share Link",
-          html: shareLink,
+          html: `<a href="${url}" target="_blank">${text}</a>`,
         });
       }
     }
@@ -658,15 +710,18 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         html += "</ul>";
         if (typeof Swal !== "undefined") {
-          Swal.fire({
-            title: "Movie Schedule",
-            html: html,
-            width: 600,
-          });
+          Swal.fire({ title: "Movie Schedule", html: html, width: 600 });
         }
       })
       .catch((err) => {
         console.error("Fetch Error:", err);
+        if (typeof Swal !== "undefined") {
+          Swal.fire({
+            icon: "error",
+            title: "Error!",
+            text: "Failed to load schedule.",
+          });
+        }
       });
   };
 
@@ -693,6 +748,140 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  window.addToFavorites = function (movieId, event) {
+    if (event) event.stopPropagation();
+    const movie = moviesData.find((m) => m.id === movieId);
+    if (!favorites.some((f) => f.id === movie.id)) {
+      favorites.push(movie);
+      points += 5;
+      localStorage.setItem("favorites", JSON.stringify(favorites));
+      localStorage.setItem("points", points);
+      updatePointsDisplay();
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "success",
+          title: "Added!",
+          text: `${movie.title} added to favorites.`,
+        });
+      }
+      if (favoritesList) displayFavorites();
+    } else {
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "warning",
+          title: "Already Added!",
+          text: `${movie.title} is already in favorites.`,
+        });
+      }
+    }
+  };
+
+  window.removeFromFavorites = function (movieId) {
+    favorites = favorites.filter((f) => f.id !== movieId);
+    localStorage.setItem("favorites", JSON.stringify(favorites));
+    displayFavorites();
+    if (typeof Swal !== "undefined") {
+      Swal.fire({
+        icon: "success",
+        title: "Removed!",
+        text: "Movie removed from favorites.",
+      });
+    }
+  };
+
+  window.addToWatchlist = function (movieId, event) {
+    if (event) event.stopPropagation();
+    const movie = moviesData.find((m) => m.id === movieId);
+    if (!watchlist.some((w) => w.id === movie.id)) {
+      watchlist.push(movie);
+      localStorage.setItem("watchlist", JSON.stringify(watchlist));
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "success",
+          title: "Added!",
+          text: `${movie.title} added to watchlist.`,
+        });
+      }
+      if (watchlistList) displayWatchlist();
+    } else {
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "warning",
+          title: "Already Added!",
+          text: `${movie.title} is already in watchlist.`,
+        });
+      }
+    }
+  };
+
+  window.removeFromWatchlist = function (movieId) {
+    watchlist = watchlist.filter((w) => w.id !== movieId);
+    localStorage.setItem("watchlist", JSON.stringify(watchlist));
+    displayWatchlist();
+    if (typeof Swal !== "undefined") {
+      Swal.fire({
+        icon: "success",
+        title: "Removed!",
+        text: "Movie removed from watchlist.",
+      });
+    }
+  };
+
+  window.markAsWatched = function (movieId) {
+    const movie = moviesData.find((m) => m.id === movieId);
+    if (!watched.some((w) => w.id === movie.id)) {
+      watched.push(movie);
+      localStorage.setItem("watched", JSON.stringify(watched));
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "success",
+          title: "Marked!",
+          text: `${movie.title} marked as watched.`,
+        });
+      }
+      if (watchedList) displayWatched();
+    } else {
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "warning",
+          title: "Already Watched!",
+          text: `${movie.title} is already marked as watched.`,
+        });
+      }
+    }
+  };
+
+  window.toggleLike = function (movieId) {
+    const user = localStorage.getItem("loggedInEmail");
+    if (!user) {
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "warning",
+          title: "Login Required!",
+          text: "Please log in to like movies.",
+        });
+      }
+      return;
+    }
+    if (!likes[movieId]) likes[movieId] = {};
+    if (likes[movieId][user]) {
+      likes[movieId][user] = 0;
+      showNotification(
+        `You unliked ${moviesData.find((m) => m.id === movieId)?.title}!`,
+        "info"
+      );
+    } else {
+      likes[movieId][user] = 1;
+      showNotification(
+        `You liked ${moviesData.find((m) => m.id === movieId)?.title}!`,
+        "success"
+      );
+    }
+    localStorage.setItem("likes", JSON.stringify(likes));
+    if (moviesList) displayMovies(moviesData, moviesList);
+    if (favoritesList) displayFavorites();
+  };
+
   window.savePersonalRating = function () {
     const movieId = localStorage.getItem("selectedMovieId");
     const rating = document.getElementById("personalRating").value;
@@ -710,6 +899,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById(
       "ratingMessage"
     ).textContent = `Your Rating: ${rating}`;
+    calculateGroupRating(movieId);
   };
 
   window.saveComment = function () {
@@ -725,9 +915,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       return;
     }
+    const user = localStorage.getItem("loggedInEmail");
     let comments =
       JSON.parse(localStorage.getItem(`comments_${movieId}`)) || [];
-    comments.push({ text: comment, date: new Date().toLocaleString() });
+    comments.push({ text: comment, date: new Date().toLocaleString(), user });
     localStorage.setItem(`comments_${movieId}`, JSON.stringify(comments));
     document.getElementById("commentInput").value = "";
     loadComments(movieId);
@@ -747,12 +938,13 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       return;
     }
+    const user = localStorage.getItem("loggedInEmail");
     let reviews = JSON.parse(localStorage.getItem(`reviews_${movieId}`)) || [];
     reviews.push({
       text: reviewText,
       stars: reviewStars,
       date: new Date().toLocaleString(),
-      user: localStorage.getItem("loggedInEmail"),
+      user,
     });
     localStorage.setItem(`reviews_${movieId}`, JSON.stringify(reviews));
     document.getElementById("reviewInput").value = "";
@@ -766,29 +958,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  function loadReviews(movieId) {
-    const reviewsList = document.getElementById("reviewsList");
-    if (!reviewsList) return;
-    const reviews =
-      JSON.parse(localStorage.getItem(`reviews_${movieId}`)) || [];
-    reviewsList.innerHTML = "";
-    reviews.forEach((review) => {
-      const div = document.createElement("div");
-      div.className = "border-bottom py-2 neon-text";
-      div.innerHTML = `
-        <p>${review.text} (${review.stars} <i class="fas fa-star"></i>) <small class="text-muted">(${review.date} - ${review.user})</small></p>
-      `;
-      reviewsList.appendChild(div);
-    });
-  }
-
-  window.saveNotes = function () {
-    const movieId = localStorage.getItem("selectedMovieId");
-    const notes = document.getElementById("notesInput").value;
-    localStorage.setItem(`notes_${movieId}`, notes);
-    document.getElementById("notesDisplay").textContent = notes;
-  };
-
   function loadComments(movieId) {
     const commentsList = document.getElementById("commentsList");
     if (!commentsList) return;
@@ -798,10 +967,71 @@ document.addEventListener("DOMContentLoaded", () => {
     comments.forEach((comment) => {
       const div = document.createElement("div");
       div.className = "border-bottom py-2 neon-text";
-      div.innerHTML = `<p>${comment.text} <small class="text-muted">(${comment.date})</small></p>`;
+      const currentUser = localStorage.getItem("loggedInEmail");
+      div.innerHTML = `
+        <p>${comment.text} <small class="text-muted">(${comment.date} - ${
+        comment.user
+      })</small>
+        ${
+          comment.user === currentUser
+            ? `<button class="btn btn-sm btn-danger ms-2" onclick="deleteComment('${movieId}', '${comment.date}')">Delete</button>`
+            : ""
+        }</p>
+      `;
       commentsList.appendChild(div);
     });
   }
+
+  window.deleteComment = function (movieId, commentDate) {
+    let comments =
+      JSON.parse(localStorage.getItem(`comments_${movieId}`)) || [];
+    comments = comments.filter((c) => c.date !== commentDate);
+    localStorage.setItem(`comments_${movieId}`, JSON.stringify(comments));
+    loadComments(movieId);
+    showNotification("Comment deleted!", "info");
+  };
+
+  function loadReviews(movieId) {
+    const reviewsList = document.getElementById("reviewsList");
+    if (!reviewsList) return;
+    const reviews =
+      JSON.parse(localStorage.getItem(`reviews_${movieId}`)) || [];
+    reviewsList.innerHTML = "";
+    reviews.forEach((review) => {
+      const div = document.createElement("div");
+      div.className = "border-bottom py-2 neon-text";
+      const currentUser = localStorage.getItem("loggedInEmail");
+      div.innerHTML = `
+        <p>${review.text} (${
+        review.stars
+      } <i class="fas fa-star"></i>) <small class="text-muted">(${
+        review.date
+      } - ${review.user})</small>
+        ${
+          review.user === currentUser
+            ? `<button class="btn btn-sm btn-danger ms-2" onclick="deleteReview('${movieId}', '${review.date}')">Delete</button>`
+            : ""
+        }</p>
+      `;
+      reviewsList.appendChild(div);
+    });
+  }
+
+  window.deleteReview = function (movieId, reviewDate) {
+    let reviews = JSON.parse(localStorage.getItem(`reviews_${movieId}`)) || [];
+    reviews = reviews.filter((r) => r.date !== reviewDate);
+    localStorage.setItem(`reviews_${movieId}`, JSON.stringify(reviews));
+    loadReviews(movieId);
+    showNotification("Review deleted!", "info");
+  };
+
+  window.saveNotes = function () {
+    const movieId = localStorage.getItem("selectedMovieId");
+    const notes = document.getElementById("notesInput").value;
+    localStorage.setItem(`notes_${movieId}`, notes);
+    document.getElementById("notesDisplay").textContent = notes;
+    showNotification("Notes saved!", "success");
+  };
 
   window.changeBackground = function () {
     const randomMovie =
@@ -812,42 +1042,26 @@ document.addEventListener("DOMContentLoaded", () => {
     generateDynamicTheme(randomMovie.poster_path);
   };
 
+  window.uploadCustomBackground = function (event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        localStorage.setItem("customBackground", e.target.result);
+        document.body.style.backgroundImage = `url(${e.target.result})`;
+        document.body.style.backgroundSize = "cover";
+        document.body.style.backgroundPosition = "center";
+        showNotification("Custom background uploaded!", "success");
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   function setVideoBackground(backdropPath) {
     document.body.style.backgroundImage = `url(https://image.tmdb.org/t/p/original${backdropPath})`;
     document.body.style.backgroundSize = "cover";
     document.body.style.backgroundPosition = "center";
   }
-
-  window.showRecommendations = function () {
-    const preferredGenres = {};
-    favorites.forEach((movie) => {
-      movie.genre.forEach((g) => {
-        preferredGenres[g] = (preferredGenres[g] || 0) + 1;
-      });
-    });
-    const topGenre = Object.entries(preferredGenres).sort(
-      (a, b) => b[1] - a[1]
-    )[0];
-    const recommendations = moviesData
-      .filter(
-        (movie) =>
-          !favorites.some((f) => f.id === movie.id) &&
-          movie.genre.includes(parseInt(topGenre[0]))
-      )
-      .slice(0, 3);
-    let html = "<h3>Recommended Movies:</h3><ul>";
-    recommendations.forEach((movie) => {
-      html += `<li><a href="#" onclick="viewDetails(${movie.id}); return false;">${movie.title}</a></li>`;
-    });
-    html += "</ul>";
-    if (typeof Swal !== "undefined") {
-      Swal.fire({
-        icon: "info",
-        title: "Recommendations",
-        html: html,
-      });
-    }
-  };
 
   window.createAutoPlaylist = function () {
     if (typeof Swal !== "undefined") {
@@ -930,6 +1144,7 @@ document.addEventListener("DOMContentLoaded", () => {
       })
       .catch((err) => {
         newsFeed.innerHTML = "<p>Failed to load news feed.</p>";
+        console.error("Fetch Error:", err);
       });
   }
 
@@ -966,7 +1181,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-    showNotification("Favorites exported successfully!", "success");
+    console.log("Favorites exported successfully!");
   };
 
   window.importFavorites = function (event) {
@@ -998,16 +1213,34 @@ document.addEventListener("DOMContentLoaded", () => {
   function showNotification(message, type) {
     const notificationBar = document.getElementById("notificationBar");
     if (!notificationBar) return;
+    notificationQueue.push({ message, type });
+    displayNextNotification();
+  }
+
+  function displayNextNotification() {
+    const notificationBar = document.getElementById("notificationBar");
     const notificationMessage = document.getElementById("notificationMessage");
+    if (
+      notificationQueue.length === 0 ||
+      notificationBar.style.display === "flex"
+    )
+      return;
+    const { message, type } = notificationQueue.shift();
     notificationMessage.textContent = message;
     notificationBar.className = `notification-bar ${type}`;
     notificationBar.style.display = "flex";
-    setTimeout(hideNotification, 3000);
+    setTimeout(() => {
+      notificationBar.style.display = "none";
+      displayNextNotification();
+    }, 3000);
   }
 
   window.hideNotification = function () {
     const notificationBar = document.getElementById("notificationBar");
-    if (notificationBar) notificationBar.style.display = "none";
+    if (notificationBar) {
+      notificationBar.style.display = "none";
+      displayNextNotification();
+    }
   };
 
   function startActiveTimeCounter() {
@@ -1032,7 +1265,6 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     if (loggedInUser) {
       profileEmail.textContent = loggedInUser.email;
-      localStorage.setItem("loggedInEmail", loggedInUser.email);
     }
     const profilePic = localStorage.getItem("profilePic");
     if (profilePic) document.getElementById("profilePic").src = profilePic;
@@ -1074,6 +1306,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const imgData = e.target.result;
       localStorage.setItem("profilePic", imgData);
       document.getElementById("profilePic").src = imgData;
+      showNotification("Profile picture updated!", "success");
     };
     reader.readAsDataURL(file);
   };
@@ -1083,30 +1316,29 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.style.fontSize = `${size}px`;
   };
 
-  function progressiveLoadImages() {
-    const images = document.querySelectorAll(".progressive-load");
-    images.forEach((img) => {
-      img.style.opacity = "0";
-      img.onload = () => {
-        img.style.transition = "opacity 0.5s ease";
-        img.style.opacity = "1";
-      };
-    });
-  }
-
   function lazyLoadImages() {
     const lazyImages = document.querySelectorAll(".lazy-load");
-    const observer = new IntersectionObserver((entries, observer) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const img = entry.target;
-          img.src = img.dataset.src;
-          img.classList.remove("lazy-load");
-          observer.unobserve(img);
-        }
+    if ("IntersectionObserver" in window) {
+      const observer = new IntersectionObserver(
+        (entries, observer) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              const img = entry.target;
+              img.src = img.dataset.src;
+              img.classList.remove("lazy-load");
+              observer.unobserve(img);
+            }
+          });
+        },
+        { rootMargin: "0px 0px 100px 0px" }
+      );
+      lazyImages.forEach((img) => observer.observe(img));
+    } else {
+      lazyImages.forEach((img) => {
+        img.src = img.dataset.src;
+        img.classList.remove("lazy-load");
       });
-    });
-    lazyImages.forEach((img) => observer.observe(img));
+    }
   }
 
   function eyeTrackingNavigation(event, element) {
@@ -1120,7 +1352,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function generateDynamicTheme(posterPath) {
     const img = new Image();
-    img.src = `https://image.tmdb.org/t/p/w500${posterPath}`;
+    img.src = `https://image.tmdb.org/t/p/w200${posterPath}`;
     img.onload = () => {
       const canvas = document.createElement("canvas");
       canvas.width = img.width;
@@ -1164,8 +1396,6 @@ document.addEventListener("DOMContentLoaded", () => {
           }).then(() => {
             window.location.href = "login.html";
           });
-        } else {
-          window.location.href = "login.html";
         }
       });
     }
@@ -1193,8 +1423,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }).then(() => {
               window.location.href = "index.html";
             });
-          } else {
-            window.location.href = "index.html";
           }
         } else {
           if (typeof Swal !== "undefined") {
@@ -1207,6 +1435,157 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
     }
+  }
+
+  window.voiceSearch = function () {
+    if (
+      !("SpeechRecognition" in window || "webkitSpeechRecognition" in window)
+    ) {
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "error",
+          title: "Unsupported!",
+          text: "Voice search is not supported in this browser.",
+        });
+      }
+      return;
+    }
+    const recognition = new (window.SpeechRecognition ||
+      window.webkitSpeechRecognition)();
+    recognition.lang = "en-US";
+    recognition.start();
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      searchInput.value = transcript;
+      filterAndSortMovies();
+      showNotification(`Searching for: ${transcript}`, "info");
+    };
+    recognition.onerror = (event) => {
+      console.error("Voice recognition error:", event.error);
+      showNotification("Voice search failed. Please try again.", "error");
+    };
+  };
+
+  function checkTimedNotifications() {
+    setInterval(() => {
+      const reminders = JSON.parse(localStorage.getItem("reminders") || "[]");
+      const customNotifications = JSON.parse(
+        localStorage.getItem("customNotifications") || "[]"
+      );
+      const now = new Date();
+      const shownNotifications = JSON.parse(
+        localStorage.getItem("shownNotifications") || "[]"
+      );
+
+      reminders.forEach((reminder) => {
+        const releaseDate = new Date(reminder.releaseDate);
+        const reminderKey = `reminder_${reminder.movieId}`;
+        if (
+          releaseDate - now < 24 * 60 * 60 * 1000 &&
+          releaseDate > now &&
+          !shownNotifications.includes(reminderKey)
+        ) {
+          showNotification(
+            `Reminder: ${
+              moviesData.find((m) => m.id === parseInt(reminder.movieId))?.title
+            } releases soon!`,
+            "warning"
+          );
+          shownNotifications.push(reminderKey);
+          localStorage.setItem(
+            "shownNotifications",
+            JSON.stringify(shownNotifications)
+          );
+        }
+      });
+
+      customNotifications.forEach((notification) => {
+        const notifyTime = new Date(notification.time);
+        const notifyKey = `custom_${notification.movieId}_${notification.time}`;
+        if (
+          notifyTime - now < 60 * 60 * 1000 && // Notify within 1 hour
+          notifyTime > now &&
+          !shownNotifications.includes(notifyKey)
+        ) {
+          showNotification(
+            `Custom Reminder: ${
+              moviesData.find((m) => m.id === parseInt(notification.movieId))
+                ?.title
+            } at ${notifyTime.toLocaleString()}!`,
+            "info"
+          );
+          shownNotifications.push(notifyKey);
+          localStorage.setItem(
+            "shownNotifications",
+            JSON.stringify(shownNotifications)
+          );
+        }
+      });
+    }, 60000); // Check every minute
+  }
+
+  window.setCustomNotification = function (movieId) {
+    const time = document.getElementById("customNotificationTime").value;
+    if (!time) {
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "error",
+          title: "Error!",
+          text: "Please select a time for the notification.",
+        });
+      }
+      return;
+    }
+    const customNotifications = JSON.parse(
+      localStorage.getItem("customNotifications") || "[]"
+    );
+    customNotifications.push({ movieId, time });
+    localStorage.setItem(
+      "customNotifications",
+      JSON.stringify(customNotifications)
+    );
+    if (typeof Swal !== "undefined") {
+      Swal.fire({
+        icon: "success",
+        title: "Notification Set!",
+        text: `Notification set for ${
+          moviesData.find((m) => m.id === movieId)?.title
+        } at ${new Date(time).toLocaleString()}.`,
+      });
+    }
+  };
+
+  window.showRandomMovie = function () {
+    const randomMovie =
+      moviesData[Math.floor(Math.random() * moviesData.length)];
+    if (randomMovie) {
+      localStorage.setItem("selectedMovieId", randomMovie.id);
+      window.location.href = "movie-details.html";
+      showNotification(`Showing random movie: ${randomMovie.title}`, "info");
+    }
+  };
+
+  function zoomImage(movie) {
+    const zoomOverlay = document.createElement("div");
+    zoomOverlay.className = "zoom-overlay";
+    zoomOverlay.innerHTML = `
+      <div class="zoom-content">
+        <img src="https://image.tmdb.org/t/p/w200/${movie.poster_path}" alt="${movie.title}" />
+        <p>${movie.title} - Rating: ${movie.rating}</p>
+        <button class="btn btn-danger" onclick="this.parentElement.parentElement.remove()">Close</button>
+      </div>
+    `;
+    document.body.appendChild(zoomOverlay);
+  }
+
+  function calculateGroupRating(movieId) {
+    const ratings = Object.entries(localStorage)
+      .filter(([key]) => key.startsWith("rating_") && key.endsWith(movieId))
+      .map(([, value]) => parseFloat(value))
+      .filter((rating) => !isNaN(rating));
+    return ratings.length
+      ? ratings.reduce((a, b) => a + b, 0) / ratings.length
+      : 0;
   }
 
   window.addEventListener("scroll", () => {

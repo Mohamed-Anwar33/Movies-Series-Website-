@@ -50,6 +50,9 @@
               <a class="nav-link" href="watched.html">Watched</a>
             </li>
             <li class="nav-item">
+              <a class="nav-link" href="watchlist.html">Watchlist</a>
+            </li>
+            <li class="nav-item">
               <a class="nav-link" href="new-releases.html">New Releases</a>
             </li>
             <li class="nav-item">
@@ -94,6 +97,26 @@
           </button>
           <button class="btn btn-dark mb-3 ms-2" onclick="toggleCinemaMode()">
             Cinema Mode
+          </button>
+          <button
+            class="btn btn-primary mb-3 ms-2"
+            onclick="addToWatchlist(getSelectedMovieId())"
+          >
+            Add to Watchlist
+          </button>
+          <button
+            class="btn btn-warning mb-3 ms-2"
+            onclick="toggleLike(getSelectedMovieId())"
+          >
+            <i class="fas fa-thumbs-up"></i> Like
+            (${likes[getSelectedMovieId()]?.[localStorage.getItem("loggedInEmail")]
+            || 0})
+          </button>
+          <button
+            class="btn btn-success mb-3 ms-2 neon-btn"
+            onclick="markAsWatched(getSelectedMovieId())"
+          >
+            <i class="fas fa-eye"></i> Mark as Watched
           </button>
           <div
             id="trailerPlayer"
@@ -150,6 +173,18 @@
             Save Notes
           </button>
           <p id="notesDisplay" class="mt-2"></p>
+          <h5 class="mt-3">Set Custom Notification</h5>
+          <input
+            type="datetime-local"
+            id="customNotificationTime"
+            class="form-control mb-2 w-50 d-inline-block"
+          />
+          <button
+            class="btn btn-info ms-2"
+            onclick="setCustomNotification(getSelectedMovieId())"
+          >
+            Set Notification
+          </button>
           <h5 class="mt-3">Expanded Movie Profile</h5>
           <div id="expandedProfile" class="mt-2"></div>
           <div id="castList" class="mt-3"></div>
