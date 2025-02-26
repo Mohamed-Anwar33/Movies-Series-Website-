@@ -12,8 +12,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
   let watched = JSON.parse(localStorage.getItem("watched")) || [];
   let watchlist = JSON.parse(localStorage.getItem("watchlist")) || [];
-
-  // Robust initialization for likes
   let likesData = localStorage.getItem("likes");
   let likes = Array.isArray(JSON.parse(likesData)) ? JSON.parse(likesData) : [];
 
@@ -28,7 +26,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const movieDetails = document.getElementById("movieDetails");
   const profileEmail = document.getElementById("profileEmail");
 
-  // Helper Functions (Defined Before Use)
+  // Redirect to login if not logged in and on index.html
+  if (!isLoggedIn && window.location.pathname.includes("index.html")) {
+    window.location.href = "login.html";
+    return; // توقف تنفيذ الكود لو تم التوجيه
+  }
+
+  // Helper Functions
   function updatePointsDisplay() {
     const pointsDisplay = document.getElementById("points");
     if (pointsDisplay) pointsDisplay.textContent = points;
@@ -506,7 +510,6 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("notesDisplay").textContent = storedNotes;
       }
 
-      // Update Like button state with safety check
       const likeBtn = document.querySelector('button[onclick^="toggleLike"]');
       if (likeBtn) {
         const isLiked =
