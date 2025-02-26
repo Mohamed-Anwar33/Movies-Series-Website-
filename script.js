@@ -13,17 +13,14 @@ document.addEventListener("DOMContentLoaded", () => {
   if (isDarkMode) enableDarkMode();
   if (darkModeToggle) darkModeToggle.addEventListener("click", toggleDarkMode);
 
-  const moviesList = document.getElementById("moviesList");
   let moviesData = JSON.parse(localStorage.getItem("offlineMovies")) || [];
   let currentPage = 1;
   let points = parseInt(localStorage.getItem("points")) || 0;
-  let notificationsEnabled =
-    localStorage.getItem("notificationsEnabled") !== "false";
   let activeTime = 0;
-
   let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
   let watched = JSON.parse(localStorage.getItem("watched")) || [];
 
+  const moviesList = document.getElementById("moviesList");
   const favoritesList = document.getElementById("favoritesList");
   const watchedList = document.getElementById("watchedList");
   const newReleasesList = document.getElementById("newReleasesList");
@@ -40,18 +37,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const genreFilter = document.getElementById("genreFilter");
   const sortSelect = document.getElementById("sortSelect");
   const yearFilter = document.getElementById("yearFilter");
+  const actorFilter = document.getElementById("actorFilter");
+  const durationFilter = document.getElementById("durationFilter");
   if (searchInput) {
     searchInput.addEventListener("input", filterAndSortMovies);
     genreFilter.addEventListener("change", filterAndSortMovies);
     sortSelect.addEventListener("change", filterAndSortMovies);
     yearFilter.addEventListener("input", filterAndSortMovies);
+    actorFilter.addEventListener("input", filterAndSortMovies);
+    durationFilter.addEventListener("input", filterAndSortMovies);
   }
 
   if (moviesList) {
     if (navigator.onLine) loadMovies(currentPage);
-    else {
-      filterAndSortMovies();
-    }
+    else filterAndSortMovies();
     loadNewsFeed();
     startActiveTimeCounter();
   }
@@ -69,12 +68,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const profileEmail = document.getElementById("profileEmail");
   if (profileEmail) loadProfile();
 
-  const savedLanguage = localStorage.getItem("language") || "en";
   const savedFontSize = localStorage.getItem("fontSize") || "16";
-  document.documentElement.lang = savedLanguage;
   document.body.style.fontSize = `${savedFontSize}px`;
-  if (document.getElementById("languageSelect")) {
-    document.getElementById("languageSelect").value = savedLanguage;
+  if (document.getElementById("fontSize")) {
     document.getElementById("fontSize").value = savedFontSize;
   }
 
@@ -128,20 +124,24 @@ document.addEventListener("DOMContentLoaded", () => {
           poster_path: movie.poster_path,
           rating: movie.vote_average,
           release_date: movie.release_date,
+          runtime: movie.runtime || 0, // For advanced filtering
         }));
         moviesData = [...moviesData, ...newMovies];
         localStorage.setItem("offlineMovies", JSON.stringify(moviesData));
         filterAndSortMovies();
+        showNotification(`New movies loaded from page ${page}!`, "info");
       })
       .catch((err) => {
         console.error("Fetch Error:", err);
         moviesList.innerHTML =
           '<p class="text-center">Failed to load movies.</p>';
-        Swal.fire({
-          icon: "error",
-          title: "Error!",
-          text: "Failed to load movies.",
-        });
+        if (typeof Swal !== "undefined") {
+          Swal.fire({
+            icon: "error",
+            title: "Error!",
+            text: "Failed to load movies.",
+          });
+        }
       })
       .finally(() => {
         if (loadingSpinner) loadingSpinner.style.display = "none";
@@ -165,6 +165,7 @@ document.addEventListener("DOMContentLoaded", () => {
           poster_path: movie.poster_path,
           rating: movie.vote_average,
           release_date: movie.release_date,
+          runtime: movie.runtime || 0,
         }));
         displayMovies(newMovies, newReleasesList);
       })
@@ -198,6 +199,18 @@ document.addEventListener("DOMContentLoaded", () => {
       filteredMovies = filteredMovies.filter((movie) =>
         movie.release_date.startsWith(year)
       );
+    const actor = actorFilter.value.toLowerCase();
+    if (actor) {
+      filteredMovies = filteredMovies.filter((movie) => {
+        const cast = JSON.parse(localStorage.getItem(`cast_${movie.id}`)) || [];
+        return cast.some((c) => c.name.toLowerCase().includes(actor));
+      });
+    }
+    const duration = parseInt(durationFilter.value);
+    if (duration)
+      filteredMovies = filteredMovies.filter(
+        (movie) => movie.runtime <= duration
+      );
     const sortBy = sortSelect.value;
     if (sortBy) {
       if (sortBy === "title-asc")
@@ -221,13 +234,17 @@ document.addEventListener("DOMContentLoaded", () => {
     targetList.innerHTML = "";
     movies.forEach((movie, index) => {
       const card = document.createElement("div");
-      card.className = "col-md-4 mb-4";
+      card.className = "col-md-4 mb-4 movie-card-wrapper";
       card.style.opacity = "0";
       card.innerHTML = `
         <div class="card movie-card ultra-card" data-movie-id="${movie.id}">
           <img src="https://image.tmdb.org/t/p/w500/${
             movie.poster_path
-          }" alt="${movie.title}" class="progressive-load" />
+          }" alt="${
+        movie.title
+      }" class="progressive-load lazy-load" data-src="https://image.tmdb.org/t/p/w500/${
+        movie.poster_path
+      }" />
           <div class="card-body">
             <h5 class="card-title neon-text">${movie.title}</h5>
             <p class="card-text">${movie.overview.substring(0, 50)}...</p>
@@ -255,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
         card.style.opacity = "1";
       }, index * 100);
     });
-    progressiveLoadImages();
+    lazyLoadImages();
   }
 
   window.addToFavorites = function (movieId, event) {
@@ -266,20 +283,24 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.setItem("favorites", JSON.stringify(favorites));
       points += 10;
       localStorage.setItem("points", points);
-      Swal.fire({
-        icon: "success",
-        title: "Added!",
-        text: `${movie.title} added to favorites. +10 points!`,
-      });
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "success",
+          title: "Added!",
+          text: `${movie.title} added to favorites. +10 points!`,
+        });
+      }
       updatePointsDisplay();
       updateLiveStats();
       if (favoritesList) displayFavorites();
     } else {
-      Swal.fire({
-        icon: "warning",
-        title: "Already Added!",
-        text: `${movie.title} is already in favorites.`,
-      });
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "warning",
+          title: "Already Added!",
+          text: `${movie.title} is already in favorites.`,
+        });
+      }
     }
   };
 
@@ -287,11 +308,13 @@ document.addEventListener("DOMContentLoaded", () => {
     favorites = favorites.filter((fav) => fav.id !== movieId);
     localStorage.setItem("favorites", JSON.stringify(favorites));
     displayFavorites();
-    Swal.fire({
-      icon: "success",
-      title: "Removed!",
-      text: "Movie removed from favorites.",
-    });
+    if (typeof Swal !== "undefined") {
+      Swal.fire({
+        icon: "success",
+        title: "Removed!",
+        text: "Movie removed from favorites.",
+      });
+    }
     updateLiveStats();
   };
 
@@ -303,19 +326,23 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.setItem("watched", JSON.stringify(watched));
       points += 5;
       localStorage.setItem("points", points);
-      Swal.fire({
-        icon: "success",
-        title: "Watched!",
-        text: `${movie.title} added to watched. +5 points!`,
-      });
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "success",
+          title: "Watched!",
+          text: `${movie.title} added to watched. +5 points!`,
+        });
+      }
       updatePointsDisplay();
       updateLiveStats();
     } else {
-      Swal.fire({
-        icon: "warning",
-        title: "Already Watched!",
-        text: `${movie.title} is already watched.`,
-      });
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "warning",
+          title: "Already Watched!",
+          text: `${movie.title} is already watched.`,
+        });
+      }
     }
   };
 
@@ -327,12 +354,16 @@ document.addEventListener("DOMContentLoaded", () => {
       favoritesList.innerHTML = "";
       favorites.forEach((movie) => {
         const card = document.createElement("div");
-        card.className = "col-md-4 mb-4";
+        card.className = "col-md-4 mb-4 movie-card-wrapper";
         card.innerHTML = `
           <div class="card movie-card ultra-card">
             <img src="https://image.tmdb.org/t/p/w500/${
               movie.poster_path
-            }" alt="${movie.title}" />
+            }" alt="${
+          movie.title
+        }" class="lazy-load" data-src="https://image.tmdb.org/t/p/w500/${
+          movie.poster_path
+        }" />
             <div class="card-body">
               <h5 class="card-title neon-text">${movie.title}</h5>
               <p class="card-text">${movie.overview.substring(0, 50)}...</p>
@@ -352,6 +383,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
     updateLiveStats();
+    lazyLoadImages();
   }
 
   function displayWatched() {
@@ -364,12 +396,16 @@ document.addEventListener("DOMContentLoaded", () => {
     watchedList.innerHTML = "";
     watched.forEach((movie) => {
       const card = document.createElement("div");
-      card.className = "col-md-4 mb-4";
+      card.className = "col-md-4 mb-4 movie-card-wrapper";
       card.innerHTML = `
         <div class="card movie-card ultra-card">
           <img src="https://image.tmdb.org/t/p/w500/${
             movie.poster_path
-          }" alt="${movie.title}" />
+          }" alt="${
+        movie.title
+      }" class="lazy-load" data-src="https://image.tmdb.org/t/p/w500/${
+        movie.poster_path
+      }" />
           <div class="card-body">
             <h5 class="card-title neon-text">${movie.title}</h5>
             <p class="card-text">${movie.overview.substring(0, 50)}...</p>
@@ -382,6 +418,7 @@ document.addEventListener("DOMContentLoaded", () => {
         .addEventListener("click", () => viewDetails(movie.id));
       watchedList.appendChild(card);
     });
+    lazyLoadImages();
   }
 
   function updateLiveStats() {
@@ -445,7 +482,11 @@ document.addEventListener("DOMContentLoaded", () => {
           <h2 class="neon-text ultra-title">${movie.title}</h2>
           <img src="https://image.tmdb.org/t/p/w500/${
             movie.poster_path
-          }" alt="${movie.title}" class="img-fluid mb-3 progressive-load" />
+          }" alt="${
+          movie.title
+        }" class="img-fluid mb-3 progressive-load lazy-load" data-src="https://image.tmdb.org/t/p/w500/${
+          movie.poster_path
+        }" />
           <p><strong>Overview:</strong> ${movie.overview}</p>
           <p><strong>Rating:</strong> ${movie.vote_average}</p>
           <p><strong>Release Date:</strong> ${movie.release_date}</p>
@@ -466,13 +507,49 @@ document.addEventListener("DOMContentLoaded", () => {
           document.getElementById("notesDisplay").textContent = storedNotes;
         }
         loadComments(movieId);
+        loadReviews(movieId);
         loadExpandedProfile(movie);
+        loadCast(movieId);
         setVideoBackground(movie.backdrop_path);
+        lazyLoadImages();
       })
       .catch((err) => {
         console.error("Fetch Error:", err);
         movieDetails.innerHTML =
           '<p class="text-center">Failed to load movie details.</p>';
+      });
+  }
+
+  function loadCast(movieId) {
+    const castList = document.getElementById("castList");
+    if (!castList) return;
+    fetch(
+      `https://api.themoviedb.org/3/movie/${movieId}/credits?language=en-US&api_key=6ca0a8ba66555ed5deb3e6d9ddb2aa6c`,
+      options
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        const mainCast = data.cast.slice(0, 5); // Top 5 actors
+        localStorage.setItem(`cast_${movieId}`, JSON.stringify(mainCast));
+        castList.innerHTML =
+          "<h5>Main Cast</h5><div class='cast-list'>" +
+          mainCast
+            .map(
+              (actor) => `
+            <div class="cast-item">
+              <img src="https://image.tmdb.org/t/p/w200${
+                actor.profile_path || "/default_actor.jpg"
+              }" alt="${actor.name}" />
+              <p>${actor.name} as ${actor.character}</p>
+            </div>
+          `
+            )
+            .join("") +
+          "</div>";
+      })
+      .catch((err) => {
+        console.error("Fetch Cast Error:", err);
+        castList.innerHTML = "<p>Failed to load cast.</p>";
       });
   }
 
@@ -497,6 +574,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.watchTrailer = function () {
     const movieId = localStorage.getItem("selectedMovieId");
+    const trailerPlayer = document.getElementById("trailerPlayer");
     fetch(
       `https://api.themoviedb.org/3/movie/${movieId}/videos?language=en-US&api_key=6ca0a8ba66555ed5deb3e6d9ddb2aa6c`,
       options
@@ -504,11 +582,10 @@ document.addEventListener("DOMContentLoaded", () => {
       .then((res) => res.json())
       .then((data) => {
         const trailer = data.results.find((video) => video.type === "Trailer");
-        if (trailer)
-          window.open(
-            `https://www.youtube.com/watch?v=${trailer.key}`,
-            "_blank"
-          );
+        if (trailer) {
+          trailerPlayer.innerHTML = `<iframe width="100%" height="315" src="https://www.youtube.com/embed/${trailer.key}" frameborder="0" allowfullscreen></iframe>`;
+          trailerPlayer.style.display = "block";
+        }
       })
       .catch((err) => {
         console.error("Fetch Error:", err);
@@ -524,7 +601,13 @@ document.addEventListener("DOMContentLoaded", () => {
       navigator.share({ title: movie.title, text: text, url: url });
     } else {
       const shareLink = `<a href="${url}" target="_blank">${text}</a>`;
-      Swal.fire({ icon: "info", title: "Share Link", html: shareLink });
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "info",
+          title: "Share Link",
+          html: shareLink,
+        });
+      }
     }
   };
 
@@ -533,15 +616,33 @@ document.addEventListener("DOMContentLoaded", () => {
     const partyLink = `${
       window.location.origin
     }/movie-details.html?movieId=${movieId}&party=${Date.now()}`;
-    Swal.fire({
-      icon: "success",
-      title: "Watch Party Started!",
-      html: `Share this link: <a href="${partyLink}" target="_blank">${partyLink}</a>`,
-    });
+    if (typeof Swal !== "undefined") {
+      Swal.fire({
+        icon: "success",
+        title: "Watch Party Started!",
+        html: `Share this link: <a href="${partyLink}" target="_blank">${partyLink}</a>`,
+      });
+    }
   };
 
   window.toggleCinemaMode = function () {
     document.body.classList.toggle("cinema-mode");
+    const trailerPlayer = document.getElementById("trailerPlayer");
+    if (
+      document.body.classList.contains("cinema-mode") &&
+      trailerPlayer.style.display === "none"
+    ) {
+      watchTrailer();
+      document
+        .querySelectorAll(".container > *:not(#movieDetails, #trailerPlayer)")
+        .forEach((el) => (el.style.opacity = "0.3"));
+    } else {
+      trailerPlayer.style.display = "none";
+      trailerPlayer.innerHTML = "";
+      document
+        .querySelectorAll(".container > *")
+        .forEach((el) => (el.style.opacity = "1"));
+    }
   };
 
   window.showMovieSchedule = function () {
@@ -556,11 +657,13 @@ document.addEventListener("DOMContentLoaded", () => {
           html += `<li>${movie.title} - ${movie.release_date} <button class="btn btn-sm btn-primary" onclick="addToReminders('${movie.id}', '${movie.release_date}')">Remind Me</button></li>`;
         });
         html += "</ul>";
-        Swal.fire({
-          title: "Movie Schedule",
-          html: html,
-          width: 600,
-        });
+        if (typeof Swal !== "undefined") {
+          Swal.fire({
+            title: "Movie Schedule",
+            html: html,
+            width: 600,
+          });
+        }
       })
       .catch((err) => {
         console.error("Fetch Error:", err);
@@ -572,17 +675,21 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!reminders.some((r) => r.movieId === movieId)) {
       reminders.push({ movieId, releaseDate });
       localStorage.setItem("reminders", JSON.stringify(reminders));
-      Swal.fire({
-        icon: "success",
-        title: "Reminder Set!",
-        text: `Reminder set for ${releaseDate}.`,
-      });
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "success",
+          title: "Reminder Set!",
+          text: `Reminder set for ${releaseDate}.`,
+        });
+      }
     } else {
-      Swal.fire({
-        icon: "warning",
-        title: "Already Set!",
-        text: "Reminder already set for this movie.",
-      });
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "warning",
+          title: "Already Set!",
+          text: "Reminder already set for this movie.",
+        });
+      }
     }
   };
 
@@ -590,11 +697,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const movieId = localStorage.getItem("selectedMovieId");
     const rating = document.getElementById("personalRating").value;
     if (rating < 0 || rating > 10) {
-      Swal.fire({
-        icon: "error",
-        title: "Invalid Rating!",
-        text: "Rating must be between 0 and 10.",
-      });
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "error",
+          title: "Invalid Rating!",
+          text: "Rating must be between 0 and 10.",
+        });
+      }
       return;
     }
     localStorage.setItem(`rating_${movieId}`, rating);
@@ -607,11 +716,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const movieId = localStorage.getItem("selectedMovieId");
     const comment = document.getElementById("commentInput").value;
     if (!comment) {
-      Swal.fire({
-        icon: "error",
-        title: "Empty Comment!",
-        text: "Please write a comment.",
-      });
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "error",
+          title: "Empty Comment!",
+          text: "Please write a comment.",
+        });
+      }
       return;
     }
     let comments =
@@ -621,6 +732,55 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("commentInput").value = "";
     loadComments(movieId);
   };
+
+  window.saveReview = function () {
+    const movieId = localStorage.getItem("selectedMovieId");
+    const reviewText = document.getElementById("reviewInput").value;
+    const reviewStars = document.getElementById("reviewStars").value;
+    if (!reviewText) {
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "error",
+          title: "Empty Review!",
+          text: "Please write a review.",
+        });
+      }
+      return;
+    }
+    let reviews = JSON.parse(localStorage.getItem(`reviews_${movieId}`)) || [];
+    reviews.push({
+      text: reviewText,
+      stars: reviewStars,
+      date: new Date().toLocaleString(),
+      user: localStorage.getItem("loggedInEmail"),
+    });
+    localStorage.setItem(`reviews_${movieId}`, JSON.stringify(reviews));
+    document.getElementById("reviewInput").value = "";
+    loadReviews(movieId);
+    if (typeof Swal !== "undefined") {
+      Swal.fire({
+        icon: "success",
+        title: "Review Submitted!",
+        text: "Your review has been added.",
+      });
+    }
+  };
+
+  function loadReviews(movieId) {
+    const reviewsList = document.getElementById("reviewsList");
+    if (!reviewsList) return;
+    const reviews =
+      JSON.parse(localStorage.getItem(`reviews_${movieId}`)) || [];
+    reviewsList.innerHTML = "";
+    reviews.forEach((review) => {
+      const div = document.createElement("div");
+      div.className = "border-bottom py-2 neon-text";
+      div.innerHTML = `
+        <p>${review.text} (${review.stars} <i class="fas fa-star"></i>) <small class="text-muted">(${review.date} - ${review.user})</small></p>
+      `;
+      reviewsList.appendChild(div);
+    });
+  }
 
   window.saveNotes = function () {
     const movieId = localStorage.getItem("selectedMovieId");
@@ -680,54 +840,62 @@ document.addEventListener("DOMContentLoaded", () => {
       html += `<li><a href="#" onclick="viewDetails(${movie.id}); return false;">${movie.title}</a></li>`;
     });
     html += "</ul>";
-    Swal.fire({ icon: "info", title: "Recommendations", html: html });
+    if (typeof Swal !== "undefined") {
+      Swal.fire({
+        icon: "info",
+        title: "Recommendations",
+        html: html,
+      });
+    }
   };
 
   window.createAutoPlaylist = function () {
-    Swal.fire({
-      title: "Create Auto Playlist",
-      html: `
-        <select id="playlistGenre" class="form-select mb-2">
-          <option value="">Select Genre</option>
-          <option value="28">Action</option>
-          <option value="18">Drama</option>
-          <option value="35">Comedy</option>
-          <option value="12">Adventure</option>
-          <option value="878">Science Fiction</option>
-        </select>
-        <input id="playlistYear" type="number" class="form-control mb-2" placeholder="Year" min="1900" max="2025">
-        <input id="playlistRating" type="number" class="form-control" placeholder="Min Rating (0-10)" min="0" max="10">
-      `,
-      showCancelButton: true,
-      confirmButtonText: "Generate",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        const genre = document.getElementById("playlistGenre").value;
-        const year = document.getElementById("playlistYear").value;
-        const minRating =
-          parseFloat(document.getElementById("playlistRating").value) || 0;
-        let filteredMovies = moviesData
-          .filter((movie) => {
-            return (
-              (!genre || movie.genre.includes(parseInt(genre))) &&
-              (!year || movie.release_date.startsWith(year)) &&
-              movie.rating >= minRating
-            );
-          })
-          .slice(0, 5);
-        let html = "<h3>Your Playlist:</h3><ul>";
-        filteredMovies.forEach((movie) => {
-          html += `<li>${movie.title} (Rating: ${movie.rating})</li>`;
-        });
-        html +=
-          "</ul><button onclick='savePlaylist(this.previousElementSibling)'>Save Playlist</button>";
-        Swal.fire({
-          icon: "success",
-          title: "Playlist Generated!",
-          html: html,
-        });
-      }
-    });
+    if (typeof Swal !== "undefined") {
+      Swal.fire({
+        title: "Create Auto Playlist",
+        html: `
+          <select id="playlistGenre" class="form-select mb-2">
+            <option value="">Select Genre</option>
+            <option value="28">Action</option>
+            <option value="18">Drama</option>
+            <option value="35">Comedy</option>
+            <option value="12">Adventure</option>
+            <option value="878">Science Fiction</option>
+          </select>
+          <input id="playlistYear" type="number" class="form-control mb-2" placeholder="Year" min="1900" max="2025">
+          <input id="playlistRating" type="number" class="form-control" placeholder="Min Rating (0-10)" min="0" max="10">
+        `,
+        showCancelButton: true,
+        confirmButtonText: "Generate",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const genre = document.getElementById("playlistGenre").value;
+          const year = document.getElementById("playlistYear").value;
+          const minRating =
+            parseFloat(document.getElementById("playlistRating").value) || 0;
+          let filteredMovies = moviesData
+            .filter((movie) => {
+              return (
+                (!genre || movie.genre.includes(parseInt(genre))) &&
+                (!year || movie.release_date.startsWith(year)) &&
+                movie.rating >= minRating
+              );
+            })
+            .slice(0, 5);
+          let html = "<h3>Your Playlist:</h3><ul>";
+          filteredMovies.forEach((movie) => {
+            html += `<li>${movie.title} (Rating: ${movie.rating})</li>`;
+          });
+          html +=
+            "</ul><button onclick='savePlaylist(this.previousElementSibling)'>Save Playlist</button>";
+          Swal.fire({
+            icon: "success",
+            title: "Playlist Generated!",
+            html: html,
+          });
+        }
+      });
+    }
   };
 
   window.savePlaylist = function (playlistElement) {
@@ -735,6 +903,13 @@ document.addEventListener("DOMContentLoaded", () => {
       (li) => li.textContent
     );
     localStorage.setItem("autoPlaylist", JSON.stringify(playlist));
+    if (typeof Swal !== "undefined") {
+      Swal.fire({
+        icon: "success",
+        title: "Playlist Saved!",
+        text: "Your playlist has been saved.",
+      });
+    }
   };
 
   function loadNewsFeed() {
@@ -762,19 +937,57 @@ document.addEventListener("DOMContentLoaded", () => {
     if (points >= 50) {
       points -= 50;
       localStorage.setItem("points", points);
-      Swal.fire({
-        icon: "success",
-        title: "Points Redeemed!",
-        text: "You unlocked a new background! (Placeholder)",
-      });
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "success",
+          title: "Points Redeemed!",
+          text: "You unlocked a new background!",
+        });
+      }
       updatePointsDisplay();
     } else {
-      Swal.fire({
-        icon: "warning",
-        title: "Not Enough Points!",
-        text: "You need 50 points to redeem.",
-      });
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "warning",
+          title: "Not Enough Points!",
+          text: "You need 50 points to redeem.",
+        });
+      }
     }
+  };
+
+  window.exportFavorites = function () {
+    const dataStr =
+      "data:text/json;charset=utf-8," +
+      encodeURIComponent(JSON.stringify(favorites));
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", "favorites.json");
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    showNotification("Favorites exported successfully!", "success");
+  };
+
+  window.importFavorites = function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const importedFavorites = JSON.parse(e.target.result);
+      importedFavorites.forEach((movie) => {
+        if (!favorites.some((f) => f.id === movie.id)) {
+          favorites.push(movie);
+          points += 5;
+        }
+      });
+      localStorage.setItem("favorites", JSON.stringify(favorites));
+      localStorage.setItem("points", points);
+      displayFavorites();
+      updatePointsDisplay();
+      showNotification("Favorites imported successfully!", "success");
+    };
+    reader.readAsText(file);
   };
 
   function updatePointsDisplay() {
@@ -783,7 +996,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function showNotification(message, type) {
-    if (!notificationsEnabled) return;
     const notificationBar = document.getElementById("notificationBar");
     if (!notificationBar) return;
     const notificationMessage = document.getElementById("notificationMessage");
@@ -824,6 +1036,35 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const profilePic = localStorage.getItem("profilePic");
     if (profilePic) document.getElementById("profilePic").src = profilePic;
+    updatePersonalStats();
+  }
+
+  function updatePersonalStats() {
+    const statsDiv = document.getElementById("personalStats");
+    if (!statsDiv) return;
+    const thisMonthWatched = watched.filter(
+      (w) => new Date(w.release_date).getMonth() === new Date().getMonth()
+    ).length;
+    const totalWatched = watched.length;
+    const genreCount = {};
+    watched.forEach((movie) => {
+      movie.genre.forEach((g) => {
+        genreCount[g] = (genreCount[g] || 0) + 1;
+      });
+    });
+    const favoriteGenre = Object.entries(genreCount).sort(
+      (a, b) => b[1] - a[1]
+    )[0];
+    const avgRating =
+      watched.reduce((sum, movie) => sum + movie.rating, 0) / totalWatched || 0;
+    statsDiv.innerHTML = `
+      <p><strong>Watched This Month:</strong> ${thisMonthWatched}</p>
+      <p><strong>Total Watched:</strong> ${totalWatched}</p>
+      <p><strong>Favorite Genre:</strong> ${getGenreName(
+        favoriteGenre ? favoriteGenre[0] : "N/A"
+      )}</p>
+      <p><strong>Average Rating:</strong> ${avgRating.toFixed(2)}</p>
+    `;
   }
 
   window.updateProfilePic = function (event) {
@@ -835,13 +1076,6 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("profilePic").src = imgData;
     };
     reader.readAsDataURL(file);
-  };
-
-  window.changeLanguage = function () {
-    const lang = document.getElementById("languageSelect").value;
-    localStorage.setItem("language", lang);
-    document.documentElement.lang = lang;
-    location.reload();
   };
 
   window.changeFontSize = function (size) {
@@ -858,6 +1092,21 @@ document.addEventListener("DOMContentLoaded", () => {
         img.style.opacity = "1";
       };
     });
+  }
+
+  function lazyLoadImages() {
+    const lazyImages = document.querySelectorAll(".lazy-load");
+    const observer = new IntersectionObserver((entries, observer) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const img = entry.target;
+          img.src = img.dataset.src;
+          img.classList.remove("lazy-load");
+          observer.unobserve(img);
+        }
+      });
+    });
+    lazyImages.forEach((img) => observer.observe(img));
   }
 
   function eyeTrackingNavigation(event, element) {
@@ -896,22 +1145,28 @@ document.addEventListener("DOMContentLoaded", () => {
         const password = document.getElementById("signupPassword").value;
         const users = JSON.parse(localStorage.getItem("users") || "[]");
         if (users.some((user) => user.email === email)) {
-          Swal.fire({
-            icon: "error",
-            title: "Error!",
-            text: "Email already exists!",
-          });
+          if (typeof Swal !== "undefined") {
+            Swal.fire({
+              icon: "error",
+              title: "Error!",
+              text: "Email already exists!",
+            });
+          }
           return;
         }
         users.push({ email, password });
         localStorage.setItem("users", JSON.stringify(users));
-        Swal.fire({
-          icon: "success",
-          title: "Success!",
-          text: "Sign up successful! Please log in.",
-        }).then(() => {
+        if (typeof Swal !== "undefined") {
+          Swal.fire({
+            icon: "success",
+            title: "Success!",
+            text: "Sign up successful! Please log in.",
+          }).then(() => {
+            window.location.href = "login.html";
+          });
+        } else {
           window.location.href = "login.html";
-        });
+        }
       });
     }
   }
@@ -930,21 +1185,32 @@ document.addEventListener("DOMContentLoaded", () => {
         if (user) {
           localStorage.setItem("loggedIn", "true");
           localStorage.setItem("loggedInEmail", email);
-          Swal.fire({
-            icon: "success",
-            title: "Success!",
-            text: "Login successful!",
-          }).then(() => {
+          if (typeof Swal !== "undefined") {
+            Swal.fire({
+              icon: "success",
+              title: "Success!",
+              text: "Login successful!",
+            }).then(() => {
+              window.location.href = "index.html";
+            });
+          } else {
             window.location.href = "index.html";
-          });
+          }
         } else {
-          Swal.fire({
-            icon: "error",
-            title: "Error!",
-            text: "Invalid email or password!",
-          });
+          if (typeof Swal !== "undefined") {
+            Swal.fire({
+              icon: "error",
+              title: "Error!",
+              text: "Invalid email or password!",
+            });
+          }
         }
       });
     }
   }
+
+  window.addEventListener("scroll", () => {
+    const scrollPosition = window.scrollY;
+    document.body.style.backgroundPositionY = `${scrollPosition * 0.5}px`;
+  });
 });
