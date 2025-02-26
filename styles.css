@@ -14,6 +14,9 @@ body {
   color: #333;
   transition: background 0.5s, font-size 0.3s;
   overflow-x: hidden;
+  background-attachment: fixed;
+  background-position: center;
+  background-size: cover;
 }
 
 .navbar {
@@ -48,7 +51,7 @@ body {
   position: relative;
   background: rgba(255, 255, 255, 0.9);
 }
-.movie-card:hover {
+.movie-card-wrapper:hover .movie-card {
   transform: translateY(-10px) scale(1.05);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
@@ -249,16 +252,10 @@ body.dark-mode .form-select:focus {
   border-color: var(--dynamic-theme-color);
 }
 
-body {
-  background-attachment: fixed;
-  background-position: center;
-  background-size: cover;
-}
-
-.movie-card {
+.movie-card-wrapper {
   transform-style: preserve-3d;
 }
-.movie-card:hover {
+.movie-card-wrapper:hover .movie-card {
   transform: translateY(-10px) scale(1.05) rotateX(5deg) rotateY(5deg);
 }
 
@@ -345,6 +342,7 @@ body {
   bottom: 20px;
   right: 20px;
   display: none;
+  z-index: 1000;
 }
 body.scroll .back-to-top {
   display: block;
