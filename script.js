@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const movieDetails = document.getElementById("movieDetails");
   const profileEmail = document.getElementById("profileEmail");
 
-  // دالة لفحص تسجيل الدخول
+  // Function to check if the user is logged in
   function checkLogin() {
     if (!isLoggedIn) {
       Swal.fire({
@@ -511,7 +511,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // بيانات وهمية لو الـ API مش شغال
+    // Mock data in case the API is not working
     const mockMovie = {
       title: "Sample Movie",
       overview: "This is a sample movie description.",
@@ -1377,21 +1377,33 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!loginForm) return;
 
     loginForm.addEventListener("submit", (e) => {
+      // Prevent the default form submission behavior
       e.preventDefault();
+
+      // Get the email and password values from the login form
       const email = document.getElementById("loginEmail").value;
       const password = document.getElementById("loginPassword").value;
+
+      // Retrieve the list of users from local storage, or initialize an empty array if not found
       const users = JSON.parse(localStorage.getItem("users") || "[]");
+
+      // Find the user with the matching email and password
       const user = users.find(
         (u) => u.email === email && u.password === password
       );
 
+      // If the user is found, log them in
       if (user) {
+        // Set the loggedIn status and email in local storage
         localStorage.setItem("loggedIn", "true");
         localStorage.setItem("loggedInEmail", email);
+
+        // Show a success message and redirect to the index page
         Swal.fire("Success", "Login successful!", "success").then(() => {
           window.location.href = "index.html";
         });
       } else {
+        // Show an error message if the email or password is invalid
         Swal.fire("Error", "Invalid email or password!", "error");
       }
     });

@@ -1,31 +1,47 @@
 <!DOCTYPE html>
+<!-- Declares the document type as HTML5 -->
 <html lang="en">
   <head>
+    <!-- Head Section: Metadata and external resources -->
     <meta charset="UTF-8" />
+    <!-- Character encoding -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Responsive viewport -->
     <title>Movies | Series</title>
+    <!-- Page title -->
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
       rel="stylesheet"
     />
+    <!-- Bootstrap CSS for styling -->
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
     />
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="styles.css" />
+    <!-- Custom CSS -->
   </head>
+
+  <!-- Favicon Section: Browser tab icon -->
   <link
     rel="icon"
     type="image/png"
     href="Colorful Retro Illustrative Tasty Popcorn Logo.png"
   />
+
   <body>
+    <!-- Notification Bar Section: Displays temporary messages -->
     <div id="notificationBar" class="notification-bar" style="display: none">
       <span id="notificationMessage"></span>
+      <!-- Notification text -->
       <button class="btn btn-sm btn-light" onclick="hideNotification()">
         X
+        <!-- Close button -->
       </button>
     </div>
+
+    <!-- Navigation Section: Main menu bar -->
     <nav class="navbar navbar-expand-lg navbar-dark">
       <div class="container">
         <a class="navbar-brand" href="index.html">
@@ -33,7 +49,9 @@
             src="Colorful Retro Illustrative Tasty Popcorn Logo.png"
             alt="Logo"
           />
+          <!-- Logo image -->
           Movies & Series
+          <!-- Brand name -->
         </a>
         <button
           class="navbar-toggler"
@@ -42,6 +60,7 @@
           data-bs-target="#navbarNav"
         >
           <span class="navbar-toggler-icon"></span>
+          <!-- Mobile menu toggle -->
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav ms-auto">
@@ -74,13 +93,17 @@
             <li class="nav-item">
               <button id="darkModeToggle" class="btn btn-outline-light ms-3">
                 <i class="fas fa-moon"></i>
+                <!-- Dark mode toggle button -->
               </button>
             </li>
           </ul>
         </div>
       </div>
     </nav>
+
+    <!-- Main Content Section: Search, filters, and movie display -->
     <div class="container mt-4">
+      <!-- Search and Filter Section: Tools to search and refine movie list -->
       <div class="search-filter mb-4">
         <input
           type="text"
@@ -88,6 +111,7 @@
           class="form-control mb-2"
           placeholder="Search by title..."
         />
+        <!-- Search bar -->
         <select id="genreFilter" class="form-select mb-2">
           <option value="">All Genres</option>
           <option value="28">Action</option>
@@ -96,6 +120,7 @@
           <option value="12">Adventure</option>
           <option value="878">Science Fiction</option>
         </select>
+        <!-- Genre filter dropdown -->
         <input
           type="number"
           id="yearFilter"
@@ -104,6 +129,7 @@
           min="1900"
           max="2025"
         />
+        <!-- Year filter -->
         <button
           class="btn btn-link mb-2"
           type="button"
@@ -111,6 +137,7 @@
           data-bs-target="#advancedFilters"
         >
           Advanced Filters <i class="fas fa-caret-down"></i>
+          <!-- Toggle for advanced filters -->
         </button>
         <div class="collapse" id="advancedFilters">
           <input
@@ -119,6 +146,7 @@
             class="form-control mb-2"
             placeholder="Actor Name"
           />
+          <!-- Actor filter -->
           <input
             type="number"
             id="durationFilter"
@@ -126,6 +154,7 @@
             placeholder="Max Duration (minutes)"
             min="0"
           />
+          <!-- Duration filter -->
         </div>
         <select id="sortSelect" class="form-select mb-2">
           <option value="">Sort By</option>
@@ -134,26 +163,37 @@
           <option value="rating-asc">Rating (Low to High)</option>
           <option value="rating-desc">Rating (High to Low)</option>
         </select>
+        <!-- Sorting options -->
         <button class="btn btn-warning neon-btn" onclick="showMovieSchedule()">
           Movie Schedule
+          <!-- Button for movie schedule -->
         </button>
         <button class="btn btn-info neon-btn" onclick="createAutoPlaylist()">
           Auto Playlist
+          <!-- Button for auto playlist -->
         </button>
         <button class="btn btn-primary neon-btn" onclick="changeBackground()">
           Change Background
+          <!-- Button to change background -->
         </button>
         <button class="btn btn-secondary neon-btn" onclick="voiceSearch()">
           <i class="fas fa-microphone"></i> Voice Search
+          <!-- Voice search button -->
         </button>
         <button class="btn btn-danger neon-btn" onclick="showRandomMovie()">
           Random Movie
+          <!-- Random movie button -->
         </button>
       </div>
+
+      <!-- Movies List Section: Displays the list of movies -->
       <div class="row" id="moviesList"></div>
+
+      <!-- Load More Section: Button and spinner for loading more movies -->
       <div class="text-center mt-4">
         <button id="loadMoreBtn" class="btn btn-primary neon-btn">
           Load More
+          <!-- Load more movies button -->
         </button>
         <div
           class="spinner-border text-primary mt-2"
@@ -161,21 +201,33 @@
           role="status"
           style="display: none"
         ></div>
+        <!-- Loading spinner, hidden by default -->
       </div>
+
+      <!-- News Feed Section: Displays movie-related news -->
       <div class="mt-4">
         <h3>News Feed</h3>
         <div id="newsFeed"></div>
+        <!-- Placeholder for news content -->
       </div>
+
+      <!-- Active Time Section: Tracks user activity time -->
       <div class="mt-4">
         <p>Active Time: <span id="activeTime">0:00</span></p>
       </div>
     </div>
+
+    <!-- Scripts Section: External and inline JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- SweetAlert for popups -->
     <script src="script.js"></script>
+    <!-- Custom JavaScript -->
     <script>
+      <!-- Inline Script: Handles login/logout visibility -->
       document.addEventListener("DOMContentLoaded", function () {
-        const isLoggedIn = false; // Replace with actual login status check
+        const isLoggedIn = false; // Placeholder for login status
         document.getElementById("loginLink").style.display = isLoggedIn
           ? "none"
           : "block";
