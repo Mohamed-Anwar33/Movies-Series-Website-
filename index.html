@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <!-- Declares the document type as HTML5 -->
+    <!-- Metadata and External Resources (Original) -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Movies | Series</title>
@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <!-- Notification Bar Section -->
+    <!-- Notification Bar (Original) -->
     <div id="notificationBar" class="notification-bar" style="display: none">
       <span id="notificationMessage"></span>
       <button class="btn btn-sm btn-light" onclick="hideNotification()">
@@ -29,7 +29,7 @@
       </button>
     </div>
 
-    <!-- Navigation Section -->
+    <!-- Navigation Section (Original) -->
     <nav class="navbar navbar-expand-lg navbar-dark">
       <div class="container">
         <a class="navbar-brand" href="index.html">
@@ -85,11 +85,10 @@
       </div>
     </nav>
 
-    <!-- Main Content Section -->
+    <!-- Main Content Section (Original with New Additions) -->
     <div class="container mt-4">
-      <!-- Search and Filter Section -->
+      <!-- Search and Filter Section (Original with New Additions) -->
       <div class="search-filter mb-4">
-        <!-- Modified Search Input with Autocomplete -->
         <input
           type="text"
           id="searchInput"
@@ -136,14 +135,36 @@
             placeholder="Max Duration (minutes)"
             min="0"
           />
+          <input
+            type="text"
+            id="keywordFilter"
+            class="form-control mb-2"
+            placeholder="Search by keyword (e.g., Superhero)"
+          />
         </div>
+        <!-- Enhanced Sorting Options (New) -->
         <select id="sortSelect" class="form-select mb-2">
           <option value="">Sort By</option>
           <option value="title-asc">Title (A-Z)</option>
           <option value="title-desc">Title (Z-A)</option>
           <option value="rating-asc">Rating (Low to High)</option>
           <option value="rating-desc">Rating (High to Low)</option>
+          <option value="popularity-desc">Popularity (High to Low)</option>
+          <option value="release-date-desc">Release Date (Newest First)</option>
         </select>
+        <!-- Added Mood Selector (New) -->
+        <select
+          id="moodFilter"
+          class="form-select mb-2"
+          onchange="filterByMood(this.value)"
+        >
+          <option value="">Select Mood</option>
+          <option value="happy">Happy</option>
+          <option value="sad">Sad</option>
+          <option value="excited">Excited</option>
+          <option value="relaxed">Relaxed</option>
+        </select>
+        <!-- Original Buttons with New Additions -->
         <button class="btn btn-warning neon-btn" onclick="showMovieSchedule()">
           Movie Schedule
         </button>
@@ -159,19 +180,26 @@
         <button class="btn btn-danger neon-btn" onclick="showRandomMovie()">
           Random Movie
         </button>
-        <!-- Added Recommendations Button -->
+
+        <!-- Added Random Movie Night Button (New) -->
         <button
-          class="btn btn-success neon-btn"
-          onclick="showRecommendations()"
+          class="btn btn-purple neon-btn mt-2"
+          onclick="generateMovieNight()"
         >
-          Recommendations
+          Movie Night
         </button>
       </div>
 
-      <!-- Movies List Section -->
+      <!-- Recently Viewed Movies Section (New) -->
+      <div class="mb-4" id="recentlyViewed">
+        <h3>Recently Viewed</h3>
+        <div class="row" id="recentlyViewedList"></div>
+      </div>
+
+      <!-- Movies List Section (Original) -->
       <div class="row" id="moviesList"></div>
 
-      <!-- Load More Section -->
+      <!-- Load More Section (Original) -->
       <div class="text-center mt-4">
         <button id="loadMoreBtn" class="btn btn-primary neon-btn">
           Load More
@@ -184,19 +212,19 @@
         ></div>
       </div>
 
-      <!-- News Feed Section -->
+      <!-- News Feed Section (Original) -->
       <div class="mt-4">
         <h3>News Feed</h3>
         <div id="newsFeed"></div>
       </div>
 
-      <!-- Active Time Section -->
+      <!-- Active Time Section (Original) -->
       <div class="mt-4">
         <p>Active Time: <span id="activeTime">0:00</span></p>
       </div>
     </div>
 
-    <!-- Back to Top Button -->
+    <!-- Back to Top Button (Original) -->
     <button
       id="backToTop"
       class="btn btn-primary back-to-top"
@@ -205,12 +233,12 @@
       <i class="fas fa-arrow-up"></i>
     </button>
 
-    <!-- Scripts Section -->
+    <!-- Scripts (Original) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="script.js"></script>
     <script>
-      // Initial Login/Logout Visibility
+      // Initial Login/Logout Visibility (Original)
       document.addEventListener("DOMContentLoaded", function () {
         const isLoggedIn = false; // Placeholder for login status
         document.getElementById("loginLink").style.display = isLoggedIn

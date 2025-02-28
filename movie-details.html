@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <!-- Metadata and External Resources (Original) -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Movie Details</title>
@@ -15,6 +16,7 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <!-- Notification Bar (Original) -->
     <div id="notificationBar" class="notification-bar" style="display: none">
       <span id="notificationMessage"></span>
       <button class="btn btn-sm btn-light" onclick="hideNotification()">
@@ -22,6 +24,7 @@
       </button>
     </div>
 
+    <!-- Navigation Bar (Original) -->
     <nav class="navbar navbar-expand-lg navbar-dark">
       <div class="container">
         <a class="navbar-brand" href="index.html">
@@ -74,11 +77,13 @@
       </div>
     </nav>
 
+    <!-- Movie Details Section (Original with New Additions) -->
     <div class="container mt-4">
       <a href="index.html" class="btn btn-secondary mb-3">Back</a>
       <div class="card ultra-card">
         <div class="card-body" id="movieDetails"></div>
         <div class="card-body">
+          <!-- Original Action Buttons with New Custom Poster Button -->
           <button
             class="btn btn-success mb-3 neon-btn"
             onclick="watchTrailer()"
@@ -118,7 +123,22 @@
           >
             <i class="fas fa-eye"></i> Mark as Watched
           </button>
+          <!-- Added Custom Poster Upload (New) -->
+          <input
+            type="file"
+            id="posterInput"
+            accept="image/*"
+            style="display: none"
+            onchange="customizePoster(event)"
+          />
+          <button
+            class="btn btn-purple mb-3 ms-2"
+            onclick="document.getElementById('posterInput').click()"
+          >
+            Customize Poster
+          </button>
 
+          <!-- Original Rating Section with Comparison (Enhanced) -->
           <h5>Add Your Rating</h5>
           <input
             type="number"
@@ -133,6 +153,7 @@
           </button>
           <p id="ratingMessage" class="mt-2"></p>
 
+          <!-- Original Comment Section -->
           <h5 class="mt-3">Add a Comment</h5>
           <textarea
             id="commentInput"
@@ -144,6 +165,7 @@
           </button>
           <div id="commentsList" class="mt-3"></div>
 
+          <!-- Original Review Section -->
           <h5 class="mt-3">Add a Review</h5>
           <textarea
             id="reviewInput"
@@ -162,6 +184,7 @@
           </button>
           <div id="reviewsList" class="mt-3"></div>
 
+          <!-- Original Notes Section -->
           <h5 class="mt-3">Personal Notes</h5>
           <textarea
             id="notesInput"
@@ -173,6 +196,7 @@
           </button>
           <p id="notesDisplay" class="mt-2"></p>
 
+          <!-- Original Custom Notification Section -->
           <h5 class="mt-3">Set Custom Notification</h5>
           <input
             type="datetime-local"
@@ -186,14 +210,12 @@
             Set Notification
           </button>
 
+          <!-- Original Expanded Profile Section -->
           <h5 class="mt-3">Expanded Movie Profile</h5>
           <div id="expandedProfile" class="mt-2"></div>
           <div id="castList" class="mt-3"></div>
 
-          <!-- Added Similar Movies Section -->
-          <h5 class="mt-3">Similar Movies</h5>
-          <div id="similarMovies" class="mt-2"></div>
-
+          <!-- Original Trailer Player -->
           <div
             id="trailerPlayer"
             class="video-container"
@@ -203,6 +225,7 @@
       </div>
     </div>
 
+    <!-- Back to Top Button (Original) -->
     <button
       id="backToTop"
       class="btn btn-primary back-to-top"
@@ -211,6 +234,7 @@
       <i class="fas fa-arrow-up"></i>
     </button>
 
+    <!-- Scripts (Original) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="script.js"></script>

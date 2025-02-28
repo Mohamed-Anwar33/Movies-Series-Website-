@@ -1,13 +1,16 @@
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap");
 
+/* ---- CSS Variables (Original with New Addition) ---- */
 :root {
   --dynamic-theme-color: #6a11cb;
   --notification-success: #28a745;
   --notification-error: #dc3545;
   --notification-warning: #ffc107;
   --notification-info: #17a2b8;
+  --purple: #800080; /* Added for Movie Night button (New) */
 }
 
+/* ---- General Styles (Original) ---- */
 body {
   font-family: "Poppins", sans-serif;
   background-color: #f8f9fa;
@@ -19,6 +22,7 @@ body {
   background-size: cover;
 }
 
+/* ---- Navbar Styles (Original) ---- */
 .navbar {
   background: linear-gradient(90deg, var(--dynamic-theme-color), #2575fc);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
@@ -42,6 +46,7 @@ body {
   color: #ffdd57 !important;
 }
 
+/* ---- Movie Card Styles (Original with Modifications) ---- */
 .movie-card {
   cursor: pointer;
   transition: transform 0.3s, box-shadow 0.3s;
@@ -52,7 +57,7 @@ body {
   background: rgba(255, 255, 255, 0.9);
 }
 .movie-card-wrapper:hover .movie-card {
-  transform: scale(1.05); /* Removed 3D rotations */
+  transform: scale(1.05); /* Removed 3D rotations (Enhanced) */
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 .movie-card img {
@@ -71,6 +76,7 @@ body {
   color: #666;
 }
 
+/* ---- Ultra Card Styles (Original) ---- */
 .ultra-card {
   background: linear-gradient(
     135deg,
@@ -81,6 +87,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+/* ---- Search Filter Styles (Original) ---- */
 .search-filter {
   background: rgba(255, 255, 255, 0.9);
   padding: 20px;
@@ -100,6 +107,7 @@ body {
   box-shadow: 0 0 5px rgba(106, 17, 203, 0.5);
 }
 
+/* ---- Button Styles (Original with New Addition) ---- */
 .btn-primary {
   background: linear-gradient(90deg, var(--dynamic-theme-color), #2575fc);
   border: none;
@@ -117,7 +125,18 @@ body {
 .btn-secondary {
   border-radius: 10px;
 }
+/* Added Purple Button for Movie Night (New) */
+.btn-purple {
+  background: linear-gradient(90deg, var(--purple), #b300b3);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+}
+.btn-purple:hover {
+  background: linear-gradient(90deg, #b300b3, var(--purple));
+}
 
+/* ---- Neon Button Styles (Original) ---- */
 .neon-btn {
   box-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00, 0 0 30px #00ff00;
   animation: neonGlow 1.5s ease-in-out infinite alternate;
@@ -136,10 +155,12 @@ body {
   cursor: not-allowed;
 }
 
+/* ---- Neon Text Styles (Original) ---- */
 .neon-text {
   text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 15px #00ff00;
 }
 
+/* ---- Ultra Title Styles (Original) ---- */
 .ultra-title {
   font-size: 2.5rem;
   background: linear-gradient(90deg, #00ff00, #ff00ff);
@@ -160,10 +181,12 @@ body {
   }
 }
 
+/* ---- Loading Spinner (Original) ---- */
 #loadingSpinner {
   display: none;
 }
 
+/* ---- Comments, Notes, Profile Styles (Original) ---- */
 #commentsList,
 #notesDisplay,
 #expandedProfile {
@@ -171,7 +194,7 @@ body {
   overflow-y: auto;
 }
 
-/* Updated Notification Bar to be clickable */
+/* ---- Notification Bar Styles (Original with Enhancement) ---- */
 .notification-bar {
   position: fixed;
   top: 0;
@@ -184,7 +207,7 @@ body {
   z-index: 1000;
   opacity: 0;
   animation: fadeInOut 3s ease-in-out forwards;
-  cursor: pointer; /* Added clickable feature */
+  cursor: pointer; /* Added clickable feature (Enhanced) */
 }
 .notification-bar.success {
   background: var(--notification-success);
@@ -217,6 +240,7 @@ body {
   }
 }
 
+/* ---- Cinema Mode Styles (Original) ---- */
 .cinema-mode {
   background: #000 !important;
   color: #fff;
@@ -230,6 +254,7 @@ body {
   opacity: 0.3;
 }
 
+/* ---- Dark Mode Styles (Original) ---- */
 body.dark-mode {
   background-color: #121212;
   color: #ffffff;
@@ -254,12 +279,7 @@ body.dark-mode .form-select:focus {
   border-color: var(--dynamic-theme-color);
 }
 
-/* Removed 3D wrapper */
-.movie-card-wrapper {
-  /* Removed transform-style: preserve-3d; */
-}
-
-/* Updated Cast List without 3D */
+/* ---- Cast List Styles (Original) ---- */
 .cast-list {
   display: flex;
   flex-wrap: wrap;
@@ -283,9 +303,9 @@ body.dark-mode .form-select:focus {
   margin: 5px 0 0;
   font-size: 0.9rem;
   color: #fff;
-  cursor: pointer; /* Added for interactivity */
 }
 
+/* ---- Stats Dashboard Styles (Original) ---- */
 .stats-dashboard {
   background: rgba(255, 255, 255, 0.9);
   padding: 20px;
@@ -300,6 +320,7 @@ body.dark-mode .form-select:focus {
   margin: 5px 0;
 }
 
+/* ---- Video Container Styles (Original) ---- */
 .video-container {
   position: relative;
   padding-bottom: 56.25%;
@@ -316,6 +337,7 @@ body.dark-mode .form-select:focus {
   border: none;
 }
 
+/* ---- Zoom Overlay Styles (Original) ---- */
 .zoom-overlay {
   position: fixed;
   top: 0;
@@ -339,6 +361,29 @@ body.dark-mode .form-select:focus {
   box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
 }
 
+/* ---- Quick Browse Styles (Enhanced) ---- */
+.quick-browse .col-md-2 {
+  padding: 5px;
+  transition: all 0.3s ease;
+}
+.quick-browse-img {
+  width: 100%;
+  height: auto;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.quick-browse-img:hover {
+  transform: scale(1.1);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* ---- Recently Viewed Styles (New) ---- */
+#recentlyViewed .movie-card img {
+  height: 150px; /* Smaller height for recently viewed */
+}
+
+/* ---- Back to Top Button Styles (Original) ---- */
 .back-to-top {
   position: fixed;
   bottom: 20px;
@@ -350,6 +395,7 @@ body.scroll .back-to-top {
   display: block;
 }
 
+/* ---- Responsive Design (Original) ---- */
 @media (max-width: 768px) {
   .navbar-brand {
     font-size: 1.2rem;

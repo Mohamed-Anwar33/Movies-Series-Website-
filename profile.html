@@ -1,27 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <!-- Metadata and External Resources (Original with Chart.js Addition) -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Profile</title>
-
-    <!-- Bootstrap CSS for responsive styling -->
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
       rel="stylesheet"
     />
-
-    <!-- Font Awesome for icons -->
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
     />
-
-    <!-- Custom CSS file -->
+    <!-- Added Chart.js for Interactive Stats (New) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <!-- Notification Bar (Hidden by Default) -->
+    <!-- Notification Bar (Original) -->
     <div id="notificationBar" class="notification-bar" style="display: none">
       <span id="notificationMessage"></span>
       <button class="btn btn-sm btn-light" onclick="hideNotification()">
@@ -29,10 +26,9 @@
       </button>
     </div>
 
-    <!-- Navigation Bar -->
+    <!-- Navigation Bar (Original) -->
     <nav class="navbar navbar-expand-lg navbar-dark">
       <div class="container">
-        <!-- Logo and Website Name -->
         <a class="navbar-brand" href="index.html">
           <img
             src="Colorful Retro Illustrative Tasty Popcorn Logo.png"
@@ -40,8 +36,6 @@
           />
           Movies & Series
         </a>
-
-        <!-- Navbar Toggle Button for Mobile View -->
         <button
           class="navbar-toggler"
           type="button"
@@ -50,8 +44,6 @@
         >
           <span class="navbar-toggler-icon"></span>
         </button>
-
-        <!-- Navbar Links -->
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav ms-auto">
             <li class="nav-item">
@@ -72,15 +64,11 @@
             <li class="nav-item">
               <a class="nav-link" href="profile.html">Profile</a>
             </li>
-
-            <!-- Logout Button (Initially Hidden) -->
             <li class="nav-item">
               <a class="nav-link" href="#" id="logoutBtn" style="display: none"
                 >Logout</a
               >
             </li>
-
-            <!-- Dark Mode Toggle Button -->
             <li class="nav-item">
               <button id="darkModeToggle" class="btn btn-outline-light ms-3">
                 <i class="fas fa-moon"></i>
@@ -91,11 +79,11 @@
       </div>
     </nav>
 
-    <!-- Profile Section -->
+    <!-- Profile Section (Original with New Additions) -->
     <div class="container mt-4">
       <h1 class="text-center mb-4 neon-text ultra-title">Profile</h1>
 
-      <!-- Profile Picture Section -->
+      <!-- Profile Picture Section (Original) -->
       <div class="text-center mb-4">
         <img
           id="profilePic"
@@ -104,8 +92,6 @@
           class="rounded-circle"
           style="width: 150px; height: 150px"
         />
-
-        <!-- Hidden Input for Uploading a Profile Picture -->
         <input
           type="file"
           id="profilePicInput"
@@ -113,16 +99,12 @@
           style="display: none"
           onchange="updateProfilePic(event)"
         />
-
-        <!-- Button to Change Profile Picture -->
         <button
           class="btn btn-primary mt-2 neon-btn"
           onclick="document.getElementById('profilePicInput').click()"
         >
           Change Picture
         </button>
-
-        <!-- Hidden Input for Uploading a Custom Background -->
         <input
           type="file"
           id="customBackgroundInput"
@@ -130,8 +112,6 @@
           style="display: none"
           onchange="uploadCustomBackground(event)"
         />
-
-        <!-- Button to Upload Custom Background -->
         <button
           class="btn btn-info mt-2"
           onclick="document.getElementById('customBackgroundInput').click()"
@@ -140,10 +120,10 @@
         </button>
       </div>
 
-      <!-- User Email Display -->
+      <!-- User Email Display (Original) -->
       <p><strong>Email:</strong> <span id="profileEmail"></span></p>
 
-      <!-- Font Size Adjustment -->
+      <!-- Font Size Adjustment (Original) -->
       <div class="mb-3">
         <label for="fontSize" class="form-label">Font Size:</label>
         <input
@@ -156,14 +136,23 @@
         />
       </div>
 
-      <!-- Personal Statistics Dashboard -->
+      <!-- Personal Statistics Dashboard (Original) -->
       <div class="stats-dashboard" id="personalStats"></div>
 
-      <!-- Popular Movies Statistics Dashboard -->
+      <!-- Added Achievements Section (Enhanced) -->
+      <div class="stats-dashboard mt-4" id="achievements"></div>
+
+      <!-- Added Interactive Stats Section (New) -->
+      <div class="stats-dashboard mt-4">
+        <h3>Interactive Stats</h3>
+        <canvas id="genreChart" width="400" height="200"></canvas>
+      </div>
+
+      <!-- Popular Movies Statistics Dashboard (Original) -->
       <div class="stats-dashboard mt-4" id="popularMoviesStats"></div>
     </div>
 
-    <!-- Back to Top Button (Hidden by Default) -->
+    <!-- Back to Top Button (Original) -->
     <button
       id="backToTop"
       class="btn btn-primary back-to-top"
@@ -172,13 +161,9 @@
       <i class="fas fa-arrow-up"></i>
     </button>
 
-    <!-- Bootstrap JS for Interactive Components -->
+    <!-- Scripts (Original) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- SweetAlert Library for Notifications -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <!-- Custom JavaScript File -->
     <script src="script.js"></script>
   </body>
 </html>
