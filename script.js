@@ -1,10 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
+  // ---- API Configuration (Original) ----
   const options = {
     method: "GET",
     headers: { accept: "application/json" },
   };
+  // Added API Key constant for consistency (Enhanced)
+  const apiKey = "6ca0a8ba66555ed5deb3e6d9ddb2aa6c";
 
-  // Global State
+  // ---- Global State (Original with New Additions) ----
   const isLoggedIn = localStorage.getItem("loggedIn") === "true";
   let moviesData = JSON.parse(localStorage.getItem("offlineMovies")) || [];
   let currentPage = 1;
@@ -14,8 +17,10 @@ document.addEventListener("DOMContentLoaded", () => {
   let watchlist = JSON.parse(localStorage.getItem("watchlist")) || [];
   let likesData = localStorage.getItem("likes");
   let likes = Array.isArray(JSON.parse(likesData)) ? JSON.parse(likesData) : [];
+  // Added reminders array for gamification (Enhanced)
+  let reminders = JSON.parse(localStorage.getItem("reminders")) || [];
 
-  // DOM Elements
+  // ---- DOM Elements (Original) ----
   const logoutBtn = document.getElementById("logoutBtn");
   const darkModeToggle = document.getElementById("darkModeToggle");
   const moviesList = document.getElementById("moviesList");
@@ -26,7 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const movieDetails = document.getElementById("movieDetails");
   const profileEmail = document.getElementById("profileEmail");
 
-  // Function to check if the user is logged in
+  // ---- Authentication Functions (Original with Enhancements) ----
   function checkLogin() {
     if (!isLoggedIn) {
       Swal.fire({
@@ -42,7 +47,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return true;
   }
 
-  // Helper Functions
   function updatePointsDisplay() {
     const pointsDisplay = document.getElementById("points");
     if (pointsDisplay) pointsDisplay.textContent = points;
@@ -80,19 +84,42 @@ document.addEventListener("DOMContentLoaded", () => {
       : '<i class="fas fa-moon"></i>';
   }
 
-  // Authentication
+  // ---- Added Session Timeout (Enhanced) ----
+  function startSessionTimeout() {
+    let timeout;
+    const resetTimeout = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        if (isLoggedIn) {
+          Swal.fire(
+            "Session Expired",
+            "You have been logged out due to inactivity.",
+            "warning"
+          ).then(() => {
+            handleLogout();
+          });
+        }
+      }, 30 * 60 * 1000); // 30 minutes
+    };
+    document.addEventListener("mousemove", resetTimeout);
+    document.addEventListener("keypress", resetTimeout);
+    resetTimeout();
+  }
+  startSessionTimeout();
+
+  // ---- Authentication Setup (Original) ----
   if (isLoggedIn && logoutBtn) {
     showLogoutButton();
     hideLoginAndSignUpLinks();
   }
   if (logoutBtn) logoutBtn.addEventListener("click", handleLogout);
 
-  // Dark Mode
+  // ---- Dark Mode Setup (Original) ----
   const isDarkMode = localStorage.getItem("darkMode") === "true";
   if (isDarkMode && darkModeToggle) enableDarkMode();
   if (darkModeToggle) darkModeToggle.addEventListener("click", toggleDarkMode);
 
-  // Filter Controls
+  // ---- Filter Controls (Original with New Addition) ----
   const filterElements = {
     searchInput: document.getElementById("searchInput"),
     genreFilter: document.getElementById("genreFilter"),
@@ -100,6 +127,8 @@ document.addEventListener("DOMContentLoaded", () => {
     yearFilter: document.getElementById("yearFilter"),
     actorFilter: document.getElementById("actorFilter"),
     durationFilter: document.getElementById("durationFilter"),
+    // Added Keyword Filter (New)
+    keywordFilter: document.getElementById("keywordFilter"),
   };
 
   if (filterElements.searchInput) {
@@ -113,9 +142,14 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
     });
+    // Added Search Suggestions Listener (Enhanced)
+    filterElements.searchInput.addEventListener(
+      "input",
+      updateSearchSuggestions
+    );
   }
 
-  // Load More Button
+  // ---- Load More Button (Original) ----
   const loadMoreBtn = document.getElementById("loadMoreBtn");
   if (loadMoreBtn) {
     loadMoreBtn.addEventListener("click", () => {
@@ -126,12 +160,16 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Initial Page Load
+  // ---- Initial Page Load (Original with New Additions) ----
   if (moviesList) {
     if (isLoggedIn) {
       navigator.onLine ? loadMovies(currentPage) : filterAndSortMovies();
       loadNewsFeed();
       startActiveTimeCounter();
+      // Added New Release Alerts Check (New)
+      checkNewReleases();
+      // Schedule daily check for new releases (New)
+      setInterval(checkNewReleases, 24 * 60 * 60 * 1000);
     } else {
       moviesList.innerHTML =
         '<p class="text-center">Please log in to view movies</p>';
@@ -148,13 +186,13 @@ document.addEventListener("DOMContentLoaded", () => {
   if (movieDetails) loadMovieDetails();
   if (profileEmail) loadProfile();
 
-  // Font Size
+  // ---- Font Size (Original) ----
   const savedFontSize = localStorage.getItem("fontSize") || "16";
   document.body.style.fontSize = `${savedFontSize}px`;
   const fontSizeInput = document.getElementById("fontSize");
   if (fontSizeInput) fontSizeInput.value = savedFontSize;
 
-  // Back to Top Button
+  // ---- Back to Top Button (Original) ----
   const backToTop = document.getElementById("backToTop");
   if (backToTop) {
     window.addEventListener("scroll", () => {
@@ -165,10 +203,11 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  // Form Setup
+  // ---- Form Setup (Original) ----
   setupSignUpForm();
   setupLoginForm();
 
+  // ---- Movie Loading Functions (Original with New Keyword Fetch) ----
   async function loadMovies(page) {
     if (!checkLogin()) return;
 
@@ -177,7 +216,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const response = await fetch(
-        `https://api.themoviedb.org/3/movie/popular?language=en-US&page=${page}&api_key=6ca0a8ba66555ed5deb3e6d9ddb2aa6c`,
+        `https://api.themoviedb.org/3/movie/popular?language=en-US&page=${page}&api_key=${apiKey}`,
         options
       );
       if (!response.ok) {
@@ -185,16 +224,20 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       const data = await response.json();
 
-      const newMovies = data.results.map((movie) => ({
-        id: movie.id,
-        title: movie.title,
-        genre: movie.genre_ids,
-        overview: movie.overview,
-        poster_path: movie.poster_path,
-        rating: movie.vote_average,
-        release_date: movie.release_date,
-        runtime: movie.runtime || 0,
-      }));
+      const newMovies = data.results.map((movie) => {
+        // Added Keyword Fetch for Each Movie (New)
+        fetchKeywords(movie.id);
+        return {
+          id: movie.id,
+          title: movie.title,
+          genre: movie.genre_ids,
+          overview: movie.overview,
+          poster_path: movie.poster_path,
+          rating: movie.vote_average,
+          release_date: movie.release_date,
+          runtime: movie.runtime || 0,
+        };
+      });
 
       moviesData = [...moviesData, ...newMovies];
       localStorage.setItem("offlineMovies", JSON.stringify(moviesData));
@@ -222,7 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const response = await fetch(
-        `https://api.themoviedb.org/3/movie/now_playing?language=en-US&page=1&api_key=6ca0a8ba66555ed5deb3e6d9ddb2aa6c`,
+        `https://api.themoviedb.org/3/movie/now_playing?language=en-US&page=1&api_key=${apiKey}`,
         options
       );
       if (!response.ok) {
@@ -253,6 +296,41 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // ---- Added Fetch Keywords Function (New) ----
+  async function fetchKeywords(movieId) {
+    try {
+      const response = await fetch(
+        `https://api.themoviedb.org/3/movie/${movieId}/keywords?api_key=${apiKey}`,
+        options
+      );
+      const data = await response.json();
+      localStorage.setItem(
+        `keywords_${movieId}`,
+        JSON.stringify(data.keywords)
+      );
+    } catch (err) {
+      console.error("Error fetching keywords:", err);
+    }
+  }
+
+  // ---- Added Search Suggestions (Enhanced) ----
+  function updateSearchSuggestions() {
+    const suggestions = document.getElementById("searchSuggestions");
+    if (!suggestions) return;
+    const searchTerm = filterElements.searchInput.value.toLowerCase();
+    const matchedMovies = moviesData
+      .filter(
+        (movie) =>
+          movie.title.toLowerCase().includes(searchTerm) ||
+          movie.overview.toLowerCase().includes(searchTerm)
+      )
+      .slice(0, 5);
+    suggestions.innerHTML = matchedMovies
+      .map((movie) => `<option value="${movie.title}">${movie.title}</option>`)
+      .join("");
+  }
+
+  // ---- Filter and Sort Movies (Original with New Keyword Filter) ----
   function filterAndSortMovies() {
     if (!moviesList) return;
     let filteredMovies = [...moviesData];
@@ -293,6 +371,16 @@ document.addEventListener("DOMContentLoaded", () => {
       );
     }
 
+    // Added Keyword Filter (New)
+    if (filterElements.keywordFilter?.value) {
+      const keyword = filterElements.keywordFilter.value.toLowerCase();
+      filteredMovies = filteredMovies.filter((movie) => {
+        const keywords =
+          JSON.parse(localStorage.getItem(`keywords_${movie.id}`)) || [];
+        return keywords.some((k) => k.name.toLowerCase().includes(keyword));
+      });
+    }
+
     if (filterElements.sortSelect?.value) {
       const sortBy = filterElements.sortSelect.value;
       filteredMovies.sort((a, b) => {
@@ -306,6 +394,7 @@ document.addEventListener("DOMContentLoaded", () => {
     displayMovies(filteredMovies);
   }
 
+  // ---- Display Movies (Original with Quick Browse Support) ----
   function displayMovies(movies, targetList = moviesList) {
     if (!targetList) return;
     if (!isLoggedIn) {
@@ -314,42 +403,62 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    targetList.innerHTML = movies
-      .map(
-        (movie) => `
-        <div class="col-md-4 mb-4 movie-card-wrapper">
-          <div class="card movie-card ultra-card" data-movie-id="${movie.id}">
+    // Check if Quick Browse mode is active (New)
+    if (targetList.classList.contains("quick-browse")) {
+      targetList.innerHTML = movies
+        .map(
+          (movie) => `
+          <div class="col-md-2 mb-2">
             <img
-              src="https://image.tmdb.org/t/p/w500/${movie.poster_path}"
+              src="https://image.tmdb.org/t/p/w200/${movie.poster_path}"
               alt="${movie.title}"
-              class="progressive-load lazy-load"
-              data-src="https://image.tmdb.org/t/p/w500/${movie.poster_path}"
+              class="lazy-load quick-browse-img"
+              data-movie-id="${movie.id}"
+              onclick="viewDetails(${movie.id})"
             />
-            <div class="card-body">
-              <h5 class="card-title neon-text">${movie.title}</h5>
-              <p class="card-text">${movie.overview.substring(0, 50)}...</p>
-              <p><strong>Rating:</strong> ${movie.rating}</p>
-              <button class="btn btn-sm btn-warning neon-btn" onclick="addToFavorites(${
-                movie.id
-              }, event)">
-                <i class="fas fa-heart"></i> Add to Favorites
-              </button>
-              <button class="btn btn-sm btn-secondary mt-2" onclick="markAsWatched(${
-                movie.id
-              }, event)">
-                <i class="fas fa-eye"></i> Watched
-              </button>
-              <button class="btn btn-sm btn-primary mt-2" onclick="addToWatchlist(${
-                movie.id
-              }, event)">
-                <i class="fas fa-plus"></i> Watchlist
-              </button>
+          </div>
+        `
+        )
+        .join("");
+    } else {
+      // Original Full Display
+      targetList.innerHTML = movies
+        .map(
+          (movie) => `
+          <div class="col-md-4 mb-4 movie-card-wrapper">
+            <div class="card movie-card ultra-card" data-movie-id="${movie.id}">
+              <img
+                src="https://image.tmdb.org/t/p/w500/${movie.poster_path}"
+                alt="${movie.title}"
+                class="progressive-load lazy-load"
+                data-src="https://image.tmdb.org/t/p/w500/${movie.poster_path}"
+              />
+              <div class="card-body">
+                <h5 class="card-title neon-text">${movie.title}</h5>
+                <p class="card-text">${movie.overview.substring(0, 50)}...</p>
+                <p><strong>Rating:</strong> ${movie.rating}</p>
+                <button class="btn btn-sm btn-warning neon-btn" onclick="addToFavorites(${
+                  movie.id
+                }, event)">
+                  <i class="fas fa-heart"></i> Add to Favorites
+                </button>
+                <button class="btn btn-sm btn-secondary mt-2" onclick="markAsWatched(${
+                  movie.id
+                }, event)">
+                  <i class="fas fa-eye"></i> Watched
+                </button>
+                <button class="btn btn-sm btn-primary mt-2" onclick="addToWatchlist(${
+                  movie.id
+                }, event)">
+                  <i class="fas fa-plus"></i> Watchlist
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      `
-      )
-      .join("");
+        `
+        )
+        .join("");
+    }
 
     targetList.querySelectorAll(".movie-card").forEach((card) => {
       card.addEventListener("click", () => {
@@ -360,6 +469,7 @@ document.addEventListener("DOMContentLoaded", () => {
     lazyLoadImages();
   }
 
+  // ---- Display Favorites (Original) ----
   function displayFavorites() {
     if (!favoritesList) return;
     if (!isLoggedIn) {
@@ -408,6 +518,7 @@ document.addEventListener("DOMContentLoaded", () => {
     lazyLoadImages();
   }
 
+  // ---- Display Watched (Original) ----
   function displayWatched() {
     if (!watchedList) return;
     if (!isLoggedIn) {
@@ -452,6 +563,7 @@ document.addEventListener("DOMContentLoaded", () => {
     lazyLoadImages();
   }
 
+  // ---- Display Watchlist (Original) ----
   function displayWatchlist() {
     if (!watchlistList) return;
     if (!isLoggedIn) {
@@ -501,6 +613,7 @@ document.addEventListener("DOMContentLoaded", () => {
     lazyLoadImages();
   }
 
+  // ---- Load Movie Details (Original with Enhancements) ----
   async function loadMovieDetails() {
     if (!checkLogin()) return;
 
@@ -511,7 +624,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // Mock data in case the API is not working
     const mockMovie = {
       title: "Sample Movie",
       overview: "This is a sample movie description.",
@@ -524,7 +636,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const response = await fetch(
-        `https://api.themoviedb.org/3/movie/${movieId}?language=en-US&api_key=6ca0a8ba66555ed5deb3e6d9ddb2aa6c`,
+        `https://api.themoviedb.org/3/movie/${movieId}?language=en-US&api_key=${apiKey}`,
         options
       );
       if (!response.ok) {
@@ -574,9 +686,12 @@ document.addEventListener("DOMContentLoaded", () => {
       loadComments(movieId);
       loadReviews(movieId);
       loadExpandedProfile(movie);
-      loadCast(movieId);
+      loadCast(movieId); // Updated to include interactive cast
       setVideoBackground(movie.backdrop_path);
       lazyLoadImages();
+
+      // Added Similar Movies (Enhanced)
+      loadSimilarMovies(movieId);
     } catch (err) {
       console.error("Error loading movie details:", err);
       movieDetails.innerHTML =
@@ -599,19 +714,40 @@ document.addEventListener("DOMContentLoaded", () => {
       loadComments(movieId);
       loadReviews(movieId);
       loadExpandedProfile(mockMovie);
-      loadCast(movieId, true); // true لاستخدام بيانات وهمية
+      loadCast(movieId, true);
       setVideoBackground(mockMovie.backdrop_path);
       lazyLoadImages();
     }
   }
 
+  // ---- Added Load Similar Movies (Enhanced) ----
+  async function loadSimilarMovies(movieId) {
+    const similarMoviesDiv = document.getElementById("similarMovies");
+    if (!similarMoviesDiv) return;
+    try {
+      const response = await fetch(
+        `https://api.themoviedb.org/3/movie/${movieId}/similar?api_key=${apiKey}`,
+        options
+      );
+      const data = await response.json();
+      similarMoviesDiv.innerHTML =
+        `<h5>Similar Movies</h5>` +
+        data.results
+          .slice(0, 3)
+          .map((movie) => `<p>${movie.title}</p>`)
+          .join("");
+    } catch (err) {
+      console.error("Error loading similar movies:", err);
+    }
+  }
+
+  // ---- Updated Load Cast with Interactive Profiles (Enhanced) ----
   async function loadCast(movieId, useMock = false) {
     if (!checkLogin()) return;
 
     const castList = document.getElementById("castList");
     if (!castList) return;
 
-    // بيانات وهمية
     const mockCast = [
       { name: "Actor 1", character: "Role 1", profile_path: null },
       { name: "Actor 2", character: "Role 2", profile_path: null },
@@ -624,7 +760,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const response = await fetch(
-        `https://api.themoviedb.org/3/movie/${movieId}/credits?language=en-US&api_key=6ca0a8ba66555ed5deb3e6d9ddb2aa6c`,
+        `https://api.themoviedb.org/3/movie/${movieId}/credits?language=en-US&api_key=${apiKey}`,
         options
       );
       if (!response.ok) {
@@ -656,7 +792,9 @@ document.addEventListener("DOMContentLoaded", () => {
                   }"
                   alt="${actor.name}"
                 />
-                <p>${actor.name} as ${actor.character}</p>
+                <p onclick="showActorDetails('${actor.id}')">${actor.name} as ${
+                actor.character
+              }</p>
               </div>
             `
             )
@@ -665,6 +803,22 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     }
   }
+
+  // ---- Added Show Actor Details (Enhanced) ----
+  window.showActorDetails = (actorId) => {
+    fetch(
+      `https://api.themoviedb.org/3/person/${actorId}?api_key=${apiKey}`,
+      options
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        Swal.fire({
+          title: data.name,
+          html: `<p>${data.biography.substring(0, 150)}...</p>`,
+        });
+      })
+      .catch((err) => console.error("Error fetching actor details:", err));
+  };
 
   function loadExpandedProfile(movie) {
     const expandedProfile = document.getElementById("expandedProfile");
@@ -714,6 +868,7 @@ document.addEventListener("DOMContentLoaded", () => {
       .join("");
   }
 
+  // ---- Load News Feed (Original) ----
   function loadNewsFeed() {
     if (!checkLogin()) return;
 
@@ -721,7 +876,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!newsFeed) return;
 
     fetch(
-      "https://api.themoviedb.org/3/movie/now_playing?language=en-US&page=1&api_key=6ca0a8ba66555ed5deb3e6d9ddb2aa6c",
+      `https://api.themoviedb.org/3/movie/now_playing?language=en-US&page=1&api_key=${apiKey}`,
       options
     )
       .then((res) => res.json())
@@ -737,6 +892,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   }
 
+  // ---- Load Profile with Interactive Stats (Original with New Additions) ----
   function loadProfile() {
     if (!checkLogin()) return;
 
@@ -750,6 +906,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if (profilePic) document.getElementById("profilePic").src = profilePic;
 
     updatePersonalStats();
+
+    // Added Achievements (Enhanced)
+    const achievementsDiv = document.getElementById("achievements");
+    if (achievementsDiv) {
+      const totalWatched = watched.length;
+      achievementsDiv.innerHTML =
+        `
+        ${totalWatched >= 50 ? "<p>Movie Buff: Watched 50+ movies!</p>" : ""}
+        ${points >= 100 ? "<p>Points Master: Earned 100+ points!</p>" : ""}
+      ` || "<p>No achievements yet</p>";
+    }
+
+    // Added Interactive Stats (New)
+    loadInteractiveStats();
   }
 
   function updatePersonalStats() {
@@ -812,6 +982,43 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
+  // ---- Added Interactive Stats Function (New) ----
+  function loadInteractiveStats() {
+    const ctx = document.getElementById("genreChart");
+    if (!ctx) return;
+
+    const genreCount = {};
+    watched.forEach((movie) => {
+      movie.genre.forEach((g) => {
+        genreCount[g] = (genreCount[g] || 0) + 1;
+      });
+    });
+
+    const labels = Object.keys(genreCount).map((id) => getGenreName(id));
+    const data = Object.values(genreCount);
+
+    new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Watched Movies by Genre",
+            data: data,
+            backgroundColor: "rgba(106, 17, 203, 0.5)",
+            borderColor: "rgba(106, 17, 203, 1)",
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true },
+        },
+      },
+    });
+  }
+
   function getGenreName(genreId) {
     const genres = {
       28: "Action",
@@ -823,7 +1030,33 @@ document.addEventListener("DOMContentLoaded", () => {
     return genres[genreId] || "Unknown";
   }
 
-  // Window Functions
+  // ---- Added Recommendations (Enhanced) ----
+  window.showRecommendations = () => {
+    if (!checkLogin()) return;
+    const watchedGenres = watched.flatMap((movie) => movie.genre);
+    const genreCount = watchedGenres.reduce((acc, genre) => {
+      acc[genre] = (acc[genre] || 0) + 1;
+      return acc;
+    }, {});
+    const favoriteGenre = Object.entries(genreCount).sort(
+      (a, b) => b[1] - a[1]
+    )[0]?.[0];
+    const recommended = moviesData
+      .filter(
+        (movie) =>
+          movie.genre.includes(parseInt(favoriteGenre)) &&
+          !watched.some((w) => w.id === movie.id)
+      )
+      .slice(0, 5);
+    Swal.fire({
+      title: "Recommendations for You",
+      html:
+        recommended.map((m) => `<p>${m.title} (${m.rating})</p>`).join("") ||
+        "No recommendations available yet",
+    });
+  };
+
+  // ---- Window Functions (Original with New Additions) ----
   window.addToFavorites = (movieId, event) => {
     if (!checkLogin()) return;
     event.stopPropagation();
@@ -908,7 +1141,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const movieId = localStorage.getItem("selectedMovieId");
     const trailerPlayer = document.getElementById("trailerPlayer");
     fetch(
-      `https://api.themoviedb.org/3/movie/${movieId}/videos?language=en-US&api_key=6ca0a8ba66555ed5deb3e6d9ddb2aa6c`,
+      `https://api.themoviedb.org/3/movie/${movieId}/videos?language=en-US&api_key=${apiKey}`,
       options
     )
       .then((res) => res.json())
@@ -1073,10 +1306,11 @@ document.addEventListener("DOMContentLoaded", () => {
     Swal.fire("Info", "Custom notifications not fully implemented yet", "info");
   };
 
+  // ---- Updated Movie Schedule with Reminders (Enhanced with Calendar) ----
   window.showMovieSchedule = () => {
     if (!checkLogin()) return;
     fetch(
-      `https://api.themoviedb.org/3/movie/upcoming?language=en-US&page=1&api_key=6ca0a8ba66555ed5deb3e6d9ddb2aa6c`,
+      `https://api.themoviedb.org/3/movie/upcoming?language=en-US&page=1&api_key=${apiKey}`,
       options
     )
       .then((res) => res.json())
@@ -1091,13 +1325,26 @@ document.addEventListener("DOMContentLoaded", () => {
       .catch((err) => console.error("Error fetching schedule:", err));
   };
 
+  // ---- Updated Add to Reminders with Calendar Integration (New) ----
   window.addToReminders = (movieId, releaseDate) => {
     if (!checkLogin()) return;
-    const reminders = JSON.parse(localStorage.getItem("reminders") || "[]");
     if (!reminders.some((r) => r.movieId === movieId)) {
       reminders.push({ movieId, releaseDate });
       localStorage.setItem("reminders", JSON.stringify(reminders));
-      Swal.fire("Success", `Reminder set for ${releaseDate}`, "success");
+      const movie = moviesData.find((m) => m.id === parseInt(movieId));
+      const eventDate =
+        new Date(releaseDate).toISOString().replace(/[-:]/g, "").split(".")[0] +
+        "Z";
+      const calendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
+        movie.title
+      )}&dates=${eventDate}/${eventDate}&details=${encodeURIComponent(
+        movie.overview
+      )}`;
+      Swal.fire({
+        icon: "success",
+        title: `Reminder set for ${releaseDate}`,
+        html: `<a href="${calendarUrl}" target="_blank">Add to Google Calendar</a>`,
+      });
     } else {
       Swal.fire("Warning", "Reminder already set", "warning");
     }
@@ -1198,6 +1445,39 @@ document.addEventListener("DOMContentLoaded", () => {
     recognition.start();
   };
 
+  // ---- Added Quick Browse Toggle (New) ----
+  window.toggleQuickBrowse = () => {
+    if (!checkLogin()) return;
+    const moviesList = document.getElementById("moviesList");
+    if (moviesList.classList.contains("quick-browse")) {
+      moviesList.classList.remove("quick-browse");
+      filterAndSortMovies(); // Restore full view
+    } else {
+      moviesList.classList.add("quick-browse");
+      displayMovies(moviesData);
+    }
+  };
+
+  // ---- Added New Release Alerts (New) ----
+  function checkNewReleases() {
+    if (!checkLogin()) return;
+    fetch(
+      `https://api.themoviedb.org/3/movie/now_playing?language=en-US&page=1&api_key=${apiKey}`,
+      options
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        const today = new Date().toISOString().split("T")[0];
+        const newReleasesToday = data.results.filter(
+          (movie) => movie.release_date === today
+        );
+        newReleasesToday.forEach((movie) => {
+          showNotification(`${movie.title} is released today!`, "info");
+        });
+      })
+      .catch((err) => console.error("Error checking new releases:", err));
+  }
+
   window.redeemPoints = () => {
     if (!checkLogin()) return;
     if (points >= 50) {
@@ -1292,7 +1572,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.style.fontSize = `${size}px`;
   };
 
-  // Utility Functions
+  // ---- Utility Functions (Original) ----
   function showNotification(message, type) {
     const notificationBar = document.getElementById("notificationBar");
     if (!notificationBar) return;
@@ -1330,7 +1610,7 @@ document.addEventListener("DOMContentLoaded", () => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           const img = entry.target;
-          img.src = img.dataset.src || "/default_image.jpg"; // صورة افتراضية لو الصورة مش موجودة
+          img.src = img.dataset.src || "/default_image.jpg";
           img.classList.remove("lazy-load");
           observer.unobserve(img);
         }
@@ -1345,6 +1625,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.style.backgroundPosition = "center";
   }
 
+  // ---- Updated Signup Form with Password Validation (Enhanced) ----
   function setupSignUpForm() {
     const signupForm = document.getElementById("signupForm");
     if (!signupForm) return;
@@ -1355,16 +1636,27 @@ document.addEventListener("DOMContentLoaded", () => {
       const password = document.getElementById("signupPassword").value;
       const users = JSON.parse(localStorage.getItem("users") || "[]");
 
+      // Added Password Strength Validation (Enhanced)
+      const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+      if (!passwordRegex.test(password)) {
+        Swal.fire(
+          "Error",
+          "Password must be at least 8 characters, with an uppercase letter and a number!",
+          "error"
+        );
+        return;
+      }
+
       if (users.some((user) => user.email === email)) {
         Swal.fire("Error", "Email already exists!", "error");
         return;
       }
 
-      users.push({ email, password });
+      users.push({ email, password, verified: false }); // Simulated email verification
       localStorage.setItem("users", JSON.stringify(users));
       Swal.fire(
         "Success",
-        "Sign up successful! Please log in.",
+        "Sign up successful! Check your email (simulated).",
         "success"
       ).then(() => {
         window.location.href = "login.html";
@@ -1377,35 +1669,26 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!loginForm) return;
 
     loginForm.addEventListener("submit", (e) => {
-      // Prevent the default form submission behavior
       e.preventDefault();
-
-      // Get the email and password values from the login form
       const email = document.getElementById("loginEmail").value;
       const password = document.getElementById("loginPassword").value;
-
-      // Retrieve the list of users from local storage, or initialize an empty array if not found
       const users = JSON.parse(localStorage.getItem("users") || "[]");
-
-      // Find the user with the matching email and password
       const user = users.find(
         (u) => u.email === email && u.password === password
       );
 
-      // If the user is found, log them in
       if (user) {
-        // Set the loggedIn status and email in local storage
         localStorage.setItem("loggedIn", "true");
         localStorage.setItem("loggedInEmail", email);
-
-        // Show a success message and redirect to the index page
         Swal.fire("Success", "Login successful!", "success").then(() => {
           window.location.href = "index.html";
         });
       } else {
-        // Show an error message if the email or password is invalid
         Swal.fire("Error", "Invalid email or password!", "error");
       }
     });
   }
+
+  setupSignUpForm();
+  setupLoginForm();
 });

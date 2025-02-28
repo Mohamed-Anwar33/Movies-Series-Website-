@@ -52,7 +52,7 @@ body {
   background: rgba(255, 255, 255, 0.9);
 }
 .movie-card-wrapper:hover .movie-card {
-  transform: translateY(-10px) scale(1.05);
+  transform: scale(1.05); /* Removed 3D rotations */
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 .movie-card img {
@@ -171,6 +171,7 @@ body {
   overflow-y: auto;
 }
 
+/* Updated Notification Bar to be clickable */
 .notification-bar {
   position: fixed;
   top: 0;
@@ -183,6 +184,7 @@ body {
   z-index: 1000;
   opacity: 0;
   animation: fadeInOut 3s ease-in-out forwards;
+  cursor: pointer; /* Added clickable feature */
 }
 .notification-bar.success {
   background: var(--notification-success);
@@ -252,13 +254,12 @@ body.dark-mode .form-select:focus {
   border-color: var(--dynamic-theme-color);
 }
 
+/* Removed 3D wrapper */
 .movie-card-wrapper {
-  transform-style: preserve-3d;
-}
-.movie-card-wrapper:hover .movie-card {
-  transform: translateY(-10px) scale(1.05) rotateX(5deg) rotateY(5deg);
+  /* Removed transform-style: preserve-3d; */
 }
 
+/* Updated Cast List without 3D */
 .cast-list {
   display: flex;
   flex-wrap: wrap;
@@ -282,6 +283,7 @@ body.dark-mode .form-select:focus {
   margin: 5px 0 0;
   font-size: 0.9rem;
   color: #fff;
+  cursor: pointer; /* Added for interactivity */
 }
 
 .stats-dashboard {
