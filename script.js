@@ -17,7 +17,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let likesData = localStorage.getItem("likes");
   let likes = Array.isArray(JSON.parse(likesData)) ? JSON.parse(likesData) : [];
   let reminders = JSON.parse(localStorage.getItem("reminders")) || [];
-  // Added Recently Viewed Movies Array (New)
   let recentlyViewed = JSON.parse(localStorage.getItem("recentlyViewed")) || [];
 
   // ---- DOM Elements (Original with New Additions) ----
@@ -30,7 +29,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const newReleasesList = document.getElementById("newReleasesList");
   const movieDetails = document.getElementById("movieDetails");
   const profileEmail = document.getElementById("profileEmail");
-  // Added Recently Viewed List (New)
   const recentlyViewedList = document.getElementById("recentlyViewedList");
 
   // ---- Authentication Functions (Original) ----
@@ -130,7 +128,7 @@ document.addEventListener("DOMContentLoaded", () => {
     actorFilter: document.getElementById("actorFilter"),
     durationFilter: document.getElementById("durationFilter"),
     keywordFilter: document.getElementById("keywordFilter"),
-    moodFilter: document.getElementById("moodFilter"), // Added (New)
+    moodFilter: document.getElementById("moodFilter"),
   };
 
   if (filterElements.searchInput) {
@@ -167,7 +165,6 @@ document.addEventListener("DOMContentLoaded", () => {
       navigator.onLine ? loadMovies(currentPage) : filterAndSortMovies();
       loadNewsFeed();
       startActiveTimeCounter();
-      // Added Recently Viewed Load (New)
       loadRecentlyViewed();
     } else {
       moviesList.innerHTML =
@@ -232,7 +229,7 @@ document.addEventListener("DOMContentLoaded", () => {
         rating: movie.vote_average,
         release_date: movie.release_date,
         runtime: movie.runtime || 0,
-        popularity: movie.popularity, // Added for sorting (New)
+        popularity: movie.popularity,
       }));
 
       moviesData = [...moviesData, ...newMovies];
@@ -278,7 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
         rating: movie.vote_average,
         release_date: movie.release_date,
         runtime: movie.runtime || 0,
-        popularity: movie.popularity, // Added for sorting (New)
+        popularity: movie.popularity,
       }));
 
       displayMovies(newMovies, newReleasesList);
@@ -360,7 +357,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // Added Mood Filter Logic (New)
     if (filterElements.moodFilter?.value) {
       const mood = filterElements.moodFilter.value;
       filteredMovies = filterByMood(mood, filteredMovies);
@@ -373,7 +369,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (sortBy === "title-desc") return b.title.localeCompare(a.title);
         if (sortBy === "rating-asc") return a.rating - b.rating;
         if (sortBy === "rating-desc") return b.rating - a.rating;
-        // Added Enhanced Sorting Options (New)
         if (sortBy === "popularity-desc") return b.popularity - a.popularity;
         if (sortBy === "release-date-desc")
           return new Date(b.release_date) - new Date(a.release_date);
@@ -392,7 +387,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // Fixed Quick Browse Mode Logic (Enhanced)
     if (targetList.classList.contains("quick-browse")) {
       targetList.innerHTML = movies
         .map(
@@ -448,7 +442,6 @@ document.addEventListener("DOMContentLoaded", () => {
         .join("");
     }
 
-    // Add click listeners for navigation
     targetList
       .querySelectorAll(".movie-card, .quick-browse-img")
       .forEach((item) => {
@@ -460,7 +453,7 @@ document.addEventListener("DOMContentLoaded", () => {
     lazyLoadImages();
   }
 
-  // ---- Display Favorites (Original) ----
+  // ---- Display Favorites (Modified) ----
   function displayFavorites() {
     if (!favoritesList) return;
     if (!isLoggedIn) {
@@ -488,9 +481,9 @@ document.addEventListener("DOMContentLoaded", () => {
               <h5 class="card-title neon-text">${movie.title}</h5>
               <p class="card-text">${movie.overview.substring(0, 50)}...</p>
               <p><strong>Rating:</strong> ${movie.rating}</p>
-              <button class="btn btn-sm btn-danger neon-btn" onclick="removeFromFavorites(${
+              <button class="btn btn-sm btn-danger neon-btn remove-btn" data-movie-id="${
                 movie.id
-              })">
+              }">
                 <i class="fas fa-trash"></i> Remove
               </button>
             </div>
@@ -500,9 +493,21 @@ document.addEventListener("DOMContentLoaded", () => {
       )
       .join("");
 
+    // مستمع حدث للبطاقة مع استثناء زر الحذف
     favoritesList.querySelectorAll(".movie-card").forEach((card) => {
-      card.addEventListener("click", () => {
-        if (checkLogin()) viewDetails(card.dataset.movieId);
+      card.addEventListener("click", (event) => {
+        if (!event.target.closest(".remove-btn") && checkLogin()) {
+          viewDetails(card.dataset.movieId);
+        }
+      });
+    });
+
+    // مستمع حدث منفصل لزر الحذف
+    favoritesList.querySelectorAll(".remove-btn").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const movieId = parseInt(button.dataset.movieId);
+        removeFromFavorites(movieId);
       });
     });
 
@@ -554,7 +559,7 @@ document.addEventListener("DOMContentLoaded", () => {
     lazyLoadImages();
   }
 
-  // ---- Display Watchlist (Original) ----
+  // ---- Display Watchlist (Modified) ----
   function displayWatchlist() {
     if (!watchlistList) return;
     if (!isLoggedIn) {
@@ -583,9 +588,9 @@ document.addEventListener("DOMContentLoaded", () => {
               <h5 class="card-title neon-text">${movie.title}</h5>
               <p class="card-text">${movie.overview.substring(0, 50)}...</p>
               <p><strong>Rating:</strong> ${movie.rating}</p>
-              <button class="btn btn-sm btn-danger neon-btn" onclick="removeFromWatchlist(${
+              <button class="btn btn-sm btn-danger neon-btn remove-btn" data-movie-id="${
                 movie.id
-              })">
+              }">
                 <i class="fas fa-trash"></i> Remove
               </button>
             </div>
@@ -595,9 +600,21 @@ document.addEventListener("DOMContentLoaded", () => {
       )
       .join("");
 
+    // مستمع حدث للبطاقة مع استثناء زر الحذف
     watchlistList.querySelectorAll(".movie-card").forEach((card) => {
-      card.addEventListener("click", () => {
-        if (checkLogin()) viewDetails(card.dataset.movieId);
+      card.addEventListener("click", (event) => {
+        if (!event.target.closest(".remove-btn") && checkLogin()) {
+          viewDetails(card.dataset.movieId);
+        }
+      });
+    });
+
+    // مستمع حدث منفصل لزر الحذف
+    watchlistList.querySelectorAll(".remove-btn").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const movieId = parseInt(button.dataset.movieId);
+        removeFromWatchlist(movieId);
       });
     });
 
@@ -657,7 +674,6 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById(
           "ratingMessage"
         ).textContent = `Your Rating: ${storedRating}`;
-        // Added Rating Comparison (New)
         const diff = parseFloat(storedRating) - movie.vote_average;
         document.getElementById(
           "ratingMessage"
@@ -688,7 +704,6 @@ document.addEventListener("DOMContentLoaded", () => {
       setVideoBackground(movie.backdrop_path);
       lazyLoadImages();
 
-      // Update Recently Viewed (New)
       updateRecentlyViewed(movie);
     } catch (err) {
       console.error("Error loading movie details:", err);
@@ -1002,7 +1017,6 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem("watchlist", JSON.stringify(watchlist));
     Swal.fire("Success", `${movie.title} added to watchlist`, "success");
     if (watchlistList) displayWatchlist();
-    // Added Watch Later Reminder (New)
     setWatchLaterReminder(movieId);
   };
 
@@ -1047,7 +1061,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const movie = moviesData.find((m) => m.id === parseInt(movieId));
     const url = `${window.location.origin}/movie-details.html?movieId=${movieId}`;
     const text = `Check out "${movie.title}" on Movies & Series! Rating: ${movie.rating}`;
-    // Added Social Sharing with Preview (New)
     if (navigator.share) {
       navigator.share({
         title: movie.title,
@@ -1311,7 +1324,6 @@ document.addEventListener("DOMContentLoaded", () => {
     recognition.start();
   };
 
-  // ---- Fixed Quick Browse Function (Enhanced) ----
   window.toggleQuickBrowse = () => {
     if (!checkLogin()) return;
     const moviesList = document.getElementById("moviesList");
@@ -1319,23 +1331,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     moviesList.classList.toggle("quick-browse");
     if (moviesList.classList.contains("quick-browse")) {
-      // Quick Browse Mode: Show only thumbnails with proper event delegation
       displayMovies(moviesData);
     } else {
-      // Full View Mode: Restore full details
       filterAndSortMovies();
     }
   };
 
-  // ---- Added Mood Filter Function (New) ----
   window.filterByMood = (mood, movies = moviesData) => {
     if (!checkLogin()) return;
     let filteredMovies = [...movies];
     const moodGenres = {
-      happy: [35], // Comedy
-      sad: [18], // Drama
-      excited: [28, 12], // Action, Adventure
-      relaxed: [10749], // Romance (assuming relaxed mood)
+      happy: [35],
+      sad: [18],
+      excited: [28, 12],
+      relaxed: [10749],
     };
 
     if (mood && moodGenres[mood]) {
@@ -1348,11 +1357,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return filteredMovies;
   };
 
-  // ---- Added Recently Viewed Function (New) ----
   function updateRecentlyViewed(movie) {
     if (!recentlyViewed.some((m) => m.id === movie.id)) {
       recentlyViewed.unshift(movie);
-      recentlyViewed = recentlyViewed.slice(0, 5); // Keep only 5 recent movies
+      recentlyViewed = recentlyViewed.slice(0, 5);
       localStorage.setItem("recentlyViewed", JSON.stringify(recentlyViewed));
       loadRecentlyViewed();
     }
@@ -1395,7 +1403,6 @@ document.addEventListener("DOMContentLoaded", () => {
     lazyLoadImages();
   }
 
-  // ---- Added Watch Later Reminder Function (New) ----
   function setWatchLaterReminder(movieId) {
     const movie = watchlist.find((m) => m.id === movieId);
     if (!movie) return;
@@ -1405,10 +1412,9 @@ document.addEventListener("DOMContentLoaded", () => {
         `Don't forget to watch "${movie.title}" from your watchlist!`,
         "info"
       );
-    }, 24 * 60 * 60 * 1000); // Reminder after 1 day
+    }, 24 * 60 * 60 * 1000);
   }
 
-  // ---- Added Random Movie Night Generator (New) ----
   window.generateMovieNight = () => {
     if (!checkLogin()) return;
     if (moviesData.length === 0) {
@@ -1432,7 +1438,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  // ---- Added Custom Movie Poster Function (New) ----
   window.customizePoster = (event) => {
     if (!checkLogin()) return;
     const movieId = localStorage.getItem("selectedMovieId");

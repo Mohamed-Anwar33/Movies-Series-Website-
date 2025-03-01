@@ -125,7 +125,14 @@
       </div>
 
       <!-- Favorites List Container -->
-      <div id="favoritesList" class="row"></div>
+      <div id="favoritesList" class="row">
+        <button
+          class="btn btn-sm btn-danger neon-btn"
+          onclick="removeFromFavorites(movie.id, event)"
+        >
+          <i class="fas fa-trash"></i> Remove
+        </button>
+      </div>
     </div>
 
     <!-- Back to Top Button (Hidden by default) -->
